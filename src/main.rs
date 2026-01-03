@@ -3,9 +3,7 @@ use tracing::{debug, info};
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 use winit::event_loop::{ControlFlow, EventLoop};
 
-mod app;
-
-use app::App;
+use qualia::App;
 
 fn main() -> Result<()> {
     tracing_subscriber::registry()

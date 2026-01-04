@@ -18,19 +18,23 @@ use winit::{
     window::{Window, WindowId},
 };
 
-/// Main application state orchestrating the GPU and windows.
 #[derive(Default)]
 pub struct App {
-    pub gpu: Option<GpuContext>,
+    state: Option<Qualia>,
+}
+
+/// Main application state orchestrating the GPU and windows.
+pub struct Qualia {
+    pub gpu: GpuContext,
 
     /// Main visual output.
-    pub view_window: Option<WindowContext>,
+    pub view_window: WindowContext,
 
     /// Controls, graphs, and parameters.
-    pub control_window: Option<WindowContext>,
+    pub control_window: WindowContext,
 
     /// UI Logic attached strictly to the control_window.
-    pub gui: Option<GuiContext>,
+    pub gui: GuiContext,
 }
 
 /// Shared GPU resources.
@@ -222,10 +226,12 @@ impl ApplicationHandler for App {
         let gui_format = control_context.config.format;
         let gui = GuiContext::new(&control_context.window, &gpu.device, gui_format);
 
-        self.view_window = Some(view_context);
-        self.control_window = Some(control_context);
-        self.gpu = Some(gpu);
-        self.gui = Some(gui);
+        self.state = Some(Qualia {
+            gpu,
+            view_window: view_context,
+            control_window: control_context,
+            gui,
+        });
     }
 
     fn window_event(
@@ -234,6 +240,16 @@ impl ApplicationHandler for App {
         _window_id: WindowId,
         _event: WindowEvent,
     ) {
+        let Qualia {
+            gpu,
+            view_window,
+            control_window,
+            gui,
+        } = match &self.state {
+            Some(v) => v,
+            None => return,
+        };
+
         todo!()
     }
 }

@@ -5,13 +5,14 @@ use egui_wgpu::{Renderer, RendererOptions};
 use egui_winit::State;
 use pollster::FutureExt;
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use wgpu::{
     Adapter, CreateSurfaceError, Device, Instance, InstanceDescriptor, Queue, RequestAdapterError,
     RequestDeviceError, Surface, SurfaceConfiguration, TextureFormat,
 };
 use winit::{
     application::ApplicationHandler,
+    dpi::PhysicalSize,
     error::OsError,
     event::WindowEvent,
     event_loop::ActiveEventLoop,
@@ -125,6 +126,14 @@ impl WindowContext {
             config,
         }
     }
+
+    pub fn resize(&mut self, device: &Device, size: PhysicalSize<u32>) {
+        if size.width > 0 && size.height > 0 {
+            self.config.width = size.width;
+            self.config.height = size.height;
+            self.surface.configure(device, &self.config);
+        }
+    }
 }
 
 #[derive(Error, Debug)]
@@ -236,20 +245,52 @@ impl ApplicationHandler for App {
 
     fn window_event(
         &mut self,
-        _event_loop: &ActiveEventLoop,
-        _window_id: WindowId,
-        _event: WindowEvent,
+        event_loop: &ActiveEventLoop,
+        window_id: WindowId,
+        event: WindowEvent,
     ) {
         let Qualia {
             gpu,
             view_window,
             control_window,
             gui,
-        } = match &self.state {
+        } = match &mut self.state {
             Some(v) => v,
             None => return,
         };
 
-        todo!()
+        if window_id == control_window.window.id() {
+            let response = gui.state.on_window_event(&control_window.window, &event);
+            if response.consumed {
+                return;
+            }
+        }
+
+        match event {
+            WindowEvent::CloseRequested => {
+                info!("Exit requested");
+                event_loop.exit();
+            }
+
+            WindowEvent::Resized(new_size) => {
+                if window_id == view_window.window.id() {
+                    view_window.resize(&gpu.device, new_size);
+                } else if window_id == control_window.window.id() {
+                    control_window.resize(&gpu.device, new_size);
+                }
+            }
+
+            WindowEvent::RedrawRequested => {
+                if window_id == view_window.window.id() {
+                    // TODO: self.render_view();
+                    view_window.window.request_redraw();
+                } else if window_id == control_window.window.id() {
+                    // TODO: self.render_gui();
+                    control_window.window.request_redraw();
+                }
+            }
+
+            _ => {}
+        }
     }
 }

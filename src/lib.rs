@@ -4,6 +4,7 @@ use winit::{
     window::WindowId,
 };
 
+mod context;
 mod session;
 
 use session::{Session, SessionAction};

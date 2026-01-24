@@ -1,21 +1,15 @@
-use egui::Context;
-use egui_wgpu::{Renderer, RendererOptions};
-use egui_winit::State;
-use pollster::FutureExt;
 use std::sync::Arc;
+
 use thiserror::Error;
 use tracing::{debug, error};
-use wgpu::{
-    Adapter, CreateSurfaceError, Device, Instance, InstanceDescriptor, Queue, RequestAdapterError,
-    RequestDeviceError, Surface, SurfaceConfiguration, TextureFormat,
-};
+use wgpu::{Instance, InstanceDescriptor, Surface};
 use winit::{
-    dpi::PhysicalSize,
-    error::OsError,
     event::WindowEvent,
     event_loop::ActiveEventLoop,
     window::{Window, WindowId},
 };
+
+use crate::context::{GpuContext, GpuContextError, GuiContext, WindowContext, WindowContextError};
 
 /// Main application state orchestrating the GPU and windows.
 pub struct Session {
@@ -140,148 +134,5 @@ impl Session {
         let window = Arc::new(event_loop.create_window(attr)?);
         let surface = instance.create_surface(window.clone())?;
         Ok((window, surface))
-    }
-}
-
-/// Shared GPU resources.
-pub struct GpuContext {
-    pub instance: Instance,
-    pub adapter: Adapter,
-    pub device: Device,
-    pub queue: Queue,
-}
-
-impl GpuContext {
-    fn try_new(instance: &Instance, compatible_surface: &Surface) -> Result<Self, GpuContextError> {
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
-                compatible_surface: Some(compatible_surface),
-                force_fallback_adapter: false,
-            })
-            .block_on()?;
-
-        let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::default(),
-                label: Some("Qualia Device"),
-                memory_hints: wgpu::MemoryHints::Performance,
-                ..Default::default()
-            })
-            .block_on()?;
-
-        Ok(Self {
-            instance: instance.clone(),
-            adapter,
-            device,
-            queue,
-        })
-    }
-}
-
-#[derive(Error, Debug)]
-pub enum GpuContextError {
-    #[error("wgpu::Adapter request failed: {0}")]
-    RequestAdapter(#[from] RequestAdapterError),
-    #[error("wgpu::Device request failed: {0}")]
-    RequestDevice(#[from] RequestDeviceError),
-}
-
-/// A renderable surface associated with a specific OS window.
-pub struct WindowContext {
-    pub window: Arc<Window>,
-    pub surface: Surface<'static>,
-    pub config: SurfaceConfiguration,
-}
-
-impl WindowContext {
-    fn from_raw(
-        window: Arc<Window>,
-        surface: Surface<'static>,
-        adapter: &Adapter,
-        device: &Device,
-    ) -> Self {
-        let size = window.inner_size();
-        let caps = surface.get_capabilities(adapter);
-
-        let format = caps
-            .formats
-            .iter()
-            .copied()
-            .find(|f| f.is_srgb())
-            .unwrap_or(caps.formats[0]);
-
-        let config = SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format,
-            width: size.width.max(1),
-            height: size.height.max(1),
-            present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: caps.alpha_modes[0],
-            view_formats: vec![],
-            desired_maximum_frame_latency: 2,
-        };
-
-        surface.configure(device, &config);
-
-        Self {
-            window,
-            surface,
-            config,
-        }
-    }
-
-    pub fn resize(&mut self, device: &Device, size: PhysicalSize<u32>) {
-        if size.width > 0 && size.height > 0 {
-            self.config.width = size.width;
-            self.config.height = size.height;
-            self.surface.configure(device, &self.config);
-        }
-    }
-}
-
-#[derive(Error, Debug)]
-pub enum WindowContextError {
-    #[error("can't create winit::Window: {0}")]
-    CreateWindow(#[from] OsError),
-    #[error("can't create wgpu::Surface: {0}")]
-    CreateSurface(#[from] CreateSurfaceError),
-}
-
-/// State required to render the GUI.
-pub struct GuiContext {
-    pub context: Context,
-    pub state: State,
-    pub renderer: Renderer,
-}
-
-impl GuiContext {
-    pub fn new(window: &Window, device: &Device, output_format: TextureFormat) -> Self {
-        let context = Context::default();
-
-        let state = State::new(
-            context.clone(),
-            egui::ViewportId::ROOT,
-            window,
-            Some(window.scale_factor() as f32),
-            None,
-            None,
-        );
-
-        let renderer = Renderer::new(
-            device,
-            output_format,
-            RendererOptions {
-                msaa_samples: 1,
-                ..Default::default()
-            },
-        );
-
-        Self {
-            context,
-            state,
-            renderer,
-        }
     }
 }

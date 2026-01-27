@@ -9,20 +9,26 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::context::{GpuContext, GpuContextError, GuiContext, WindowContext, WindowContextError};
+use crate::{
+    context::{GpuContext, GpuContextError, GuiContext, WindowContext, WindowContextError},
+    render::{ControlRenderer, RenderError, Renderer, ViewRenderer},
+};
 
 /// Main application state orchestrating the GPU and windows.
 pub struct Session {
-    pub gpu: GpuContext,
+    gpu: GpuContext,
 
     /// Main visual output.
-    pub view: WindowContext,
+    view: WindowContext,
 
     /// Controls, graphs, and parameters.
-    pub control: WindowContext,
+    control: WindowContext,
 
     /// UI Logic attached strictly to the control_window.
-    pub gui: GuiContext,
+    gui: GuiContext,
+
+    view_renderer: ViewRenderer,
+    control_renderer: ControlRenderer,
 }
 
 #[derive(Debug)]
@@ -40,6 +46,12 @@ pub enum SessionError {
 
     #[error("Failed to init GPU: {0}")]
     InitGpu(#[from] GpuContextError),
+
+    #[error("Error while rendering view: {0}")]
+    RenderView(RenderError),
+
+    #[error("Error while rendering control {0}")]
+    RenderControl(RenderError),
 }
 
 impl Session {
@@ -67,11 +79,16 @@ impl Session {
         let gui_format = control_context.config.format;
         let gui = GuiContext::new(&control_context.window, &gpu.device, gui_format);
 
+        let view_renderer = ViewRenderer;
+        let control_renderer = ControlRenderer;
+
         Ok(Self {
             gpu,
             view: view_context,
             control: control_context,
             gui,
+            view_renderer,
+            control_renderer,
         })
     }
 
@@ -103,9 +120,13 @@ impl Session {
 
             WindowEvent::RedrawRequested => {
                 if window_id == self.view.window.id() {
-                    self.render_view();
+                    self.view_renderer
+                        .render(&self.gpu, &self.view)
+                        .map_err(SessionError::RenderView)?;
                 } else if window_id == self.control.window.id() {
-                    self.render_control();
+                    self.control_renderer
+                        .render(&self.gpu, &self.control)
+                        .map_err(SessionError::RenderControl)?;
                 }
 
                 Ok(None)
@@ -113,16 +134,6 @@ impl Session {
 
             _ => Ok(None),
         }
-    }
-
-    fn render_view(&mut self) -> () {
-        // View render logic...
-        self.view.window.request_redraw();
-    }
-
-    fn render_control(&mut self) -> () {
-        // Gui render logic..
-        self.control.window.request_redraw();
     }
 
     fn create_window_and_surface(

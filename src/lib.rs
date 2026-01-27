@@ -5,6 +5,7 @@ use winit::{
 };
 
 mod context;
+mod render;
 mod session;
 
 use session::{Session, SessionAction};

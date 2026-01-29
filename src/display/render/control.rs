@@ -1,4 +1,4 @@
-use crate::context::{GpuContext, GuiContext, WindowContext};
+use super::super::context::{ControlWindow, GpuContext};
 
 use super::{RenderError, render_frame};
 
@@ -8,10 +8,9 @@ impl ControlRenderer {
     pub fn render(
         &mut self,
         gpu: &GpuContext,
-        target: &WindowContext,
-        _gui: &mut GuiContext,
+        control: &mut ControlWindow,
     ) -> Result<(), RenderError> {
-        render_frame(gpu, target, |_encoder, _view| {
+        render_frame(gpu, &control.window, |_encoder, _view| {
             // TODO: render egui
         })
     }

@@ -5,8 +5,7 @@ use winit::{
 };
 
 mod audio;
-mod context;
-mod render;
+mod display;
 mod session;
 
 use session::{Session, SessionAction};

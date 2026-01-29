@@ -2,7 +2,12 @@ use std::sync::Arc;
 
 use thiserror::Error;
 use wgpu::{Adapter, CreateSurfaceError, Device, Instance, Surface, SurfaceConfiguration};
-use winit::{dpi::PhysicalSize, error::OsError, event_loop::ActiveEventLoop, window::Window};
+use winit::{
+    dpi::PhysicalSize, error::OsError, event::WindowEvent, event_loop::ActiveEventLoop,
+    window::Window,
+};
+
+use super::GuiContext;
 
 /// Window and surface before GPU configuration.
 pub struct UnconfiguredWindow {
@@ -90,5 +95,19 @@ impl WindowContext {
             self.config.height = size.height;
             self.surface.configure(device, &self.config);
         }
+    }
+}
+
+pub struct ControlWindow {
+    pub window: WindowContext,
+    pub gui: GuiContext,
+}
+
+impl ControlWindow {
+    pub fn handle_event(&mut self, event: &WindowEvent) -> bool {
+        self.gui
+            .state
+            .on_window_event(&self.window.window, event)
+            .consumed
     }
 }

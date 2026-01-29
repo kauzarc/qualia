@@ -7,7 +7,7 @@ mod view;
 pub use control::ControlRenderer;
 pub use view::ViewRenderer;
 
-use crate::context::{GpuContext, WindowContext};
+use super::context::{GpuContext, WindowContext};
 
 pub fn render_frame<F>(gpu: &GpuContext, target: &WindowContext, f: F) -> Result<(), RenderError>
 where

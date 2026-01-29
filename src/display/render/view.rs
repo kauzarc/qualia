@@ -1,4 +1,4 @@
-use crate::context::{GpuContext, WindowContext};
+use super::super::context::{GpuContext, WindowContext};
 
 use super::{RenderError, render_frame};
 

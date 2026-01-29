@@ -11,7 +11,7 @@ use winit::{
 
 use crate::{
     context::{GpuContext, GpuContextError, GuiContext, WindowContext, WindowContextError},
-    render::{ControlRenderer, RenderError, Renderer, ViewRenderer},
+    render::{ControlRenderer, RenderError, ViewRenderer},
 };
 
 /// Main application state orchestrating the GPU and windows.
@@ -125,7 +125,7 @@ impl Session {
                         .map_err(SessionError::RenderView)?;
                 } else if window_id == self.control.window.id() {
                     self.control_renderer
-                        .render(&self.gpu, &self.control)
+                        .render(&self.gpu, &self.control, &mut self.gui)
                         .map_err(SessionError::RenderControl)?;
                 }
 

@@ -1,5 +1,5 @@
 use thiserror::Error;
-use wgpu::SurfaceError;
+use wgpu::{CommandEncoder, SurfaceError, TextureView};
 
 mod control;
 mod view;
@@ -9,20 +9,24 @@ pub use view::ViewRenderer;
 
 use crate::context::{GpuContext, WindowContext};
 
-pub trait Renderer {
-    fn render(&mut self, gpu: &GpuContext, target: &WindowContext) -> Result<(), RenderError> {
-        let frame = target.surface.get_current_texture()?;
-        let view = frame.texture.create_view(&Default::default());
-        let mut encoder = gpu.device.create_command_encoder(&Default::default());
+pub fn render_frame<F>(
+    gpu: &GpuContext,
+    target: &WindowContext,
+    f: F,
+) -> Result<(), RenderError>
+where
+    F: FnOnce(&mut CommandEncoder, &TextureView),
+{
+    let frame = target.surface.get_current_texture()?;
+    let view = frame.texture.create_view(&Default::default());
+    let mut encoder = gpu.device.create_command_encoder(&Default::default());
 
-        todo!();
+    f(&mut encoder, &view);
 
-        gpu.queue.submit(Some(encoder.finish()));
-        frame.present();
-
-        target.window.request_redraw();
-        Ok(())
-    }
+    gpu.queue.submit(Some(encoder.finish()));
+    frame.present();
+    target.window.request_redraw();
+    Ok(())
 }
 
 #[derive(Debug, Error)]

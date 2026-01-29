@@ -43,7 +43,7 @@ impl AudioDriver {
         })
     }
 
-    pub fn stop(&mut self) {
+    fn stop(&mut self) {
         self.stop_flag.store(true, Ordering::Relaxed);
         if let Some(handle) = self.handle.take() {
             if handle.join().is_err() {

@@ -4,7 +4,6 @@ use wgpu::{Adapter, Device, Instance, Queue, RequestAdapterError, RequestDeviceE
 
 /// Shared GPU resources.
 pub struct GpuContext {
-    pub instance: Instance,
     pub adapter: Adapter,
     pub device: Device,
     pub queue: Queue,
@@ -43,7 +42,6 @@ impl GpuContext {
             .block_on()?;
 
         Ok(Self {
-            instance: instance.clone(),
             adapter,
             device,
             queue,

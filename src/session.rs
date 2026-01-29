@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub struct Session {
-    audio_driver: AudioDriver,
+    _audio_driver: AudioDriver,
     display: Display,
 }
 
@@ -35,7 +35,7 @@ impl Session {
         let display = Display::try_new(event_loop)?;
 
         Ok(Self {
-            audio_driver,
+            _audio_driver: audio_driver,
             display,
         })
     }

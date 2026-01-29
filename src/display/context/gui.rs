@@ -6,9 +6,9 @@ use winit::window::Window;
 
 /// State required to render the GUI.
 pub struct GuiContext {
-    pub context: Context,
+    pub _context: Context,
     pub state: State,
-    pub renderer: Renderer,
+    pub _renderer: Renderer,
 }
 
 impl GuiContext {
@@ -34,9 +34,9 @@ impl GuiContext {
         );
 
         Self {
-            context,
+            _context: context,
             state,
-            renderer,
+            _renderer: renderer,
         }
     }
 }

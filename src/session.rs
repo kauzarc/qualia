@@ -43,14 +43,14 @@ impl Session {
     pub fn update(
         &mut self,
         window_id: WindowId,
-        event: WindowEvent,
+        event: &WindowEvent,
     ) -> Result<Option<SessionAction>, SessionError> {
         if matches!(event, WindowEvent::CloseRequested) {
             return Ok(Some(SessionAction::Exit));
         }
 
         self.display
-            .handle_event(window_id, &event)
+            .handle_event(window_id, event)
             .map_err(SessionError::from)?;
 
         Ok(None)

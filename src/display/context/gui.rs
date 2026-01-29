@@ -12,6 +12,7 @@ pub struct GuiContext {
 }
 
 impl GuiContext {
+    #[allow(clippy::cast_possible_truncation)]
     pub fn new(window: &Window, device: &Device, output_format: TextureFormat) -> Self {
         let context = Context::default();
 

@@ -45,10 +45,10 @@ impl AudioDriver {
 
     fn stop(&mut self) {
         self.stop_flag.store(true, Ordering::Relaxed);
-        if let Some(handle) = self.handle.take() {
-            if handle.join().is_err() {
-                error!("Audio driver thread panicked");
-            }
+        if let Some(handle) = self.handle.take()
+            && handle.join().is_err()
+        {
+            error!("Audio driver thread panicked");
         }
     }
 }

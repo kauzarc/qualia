@@ -1,5 +1,7 @@
 use thiserror::Error;
-use wgpu::{CommandEncoder, SurfaceError, TextureView};
+use wgpu::{
+    CommandEncoder, CommandEncoderDescriptor, SurfaceError, TextureView, TextureViewDescriptor,
+};
 
 mod control;
 mod view;
@@ -14,8 +16,10 @@ where
     F: FnOnce(&mut CommandEncoder, &TextureView),
 {
     let frame = target.surface.get_current_texture()?;
-    let view = frame.texture.create_view(&Default::default());
-    let mut encoder = gpu.device.create_command_encoder(&Default::default());
+    let view = frame.texture.create_view(&TextureViewDescriptor::default());
+    let mut encoder = gpu
+        .device
+        .create_command_encoder(&CommandEncoderDescriptor::default());
 
     f(&mut encoder, &view);
 

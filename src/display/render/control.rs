@@ -5,6 +5,7 @@ use super::{RenderError, render_frame};
 pub struct ControlRenderer;
 
 impl ControlRenderer {
+    #[allow(clippy::unused_self)]
     pub fn render(
         &mut self,
         gpu: &GpuContext,

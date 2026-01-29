@@ -26,7 +26,6 @@ impl ApplicationHandler for App {
             Err(err) => {
                 error!("Fatal error initializing session: {err}");
                 event_loop.exit();
-                return;
             }
         }
     }
@@ -38,7 +37,7 @@ impl ApplicationHandler for App {
         event: WindowEvent,
     ) {
         if let Some(session) = &mut self.session {
-            match session.update(window_id, event) {
+            match session.update(window_id, &event) {
                 Ok(Some(action)) => match action {
                     SessionAction::Exit => {
                         self.session = None;

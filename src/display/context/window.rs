@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use thiserror::Error;
-use wgpu::{Adapter, CreateSurfaceError, Device, Instance, Surface, SurfaceConfiguration};
+use wgpu::{
+    Adapter, CreateSurfaceError, Device, Instance, Surface, SurfaceConfiguration, TextureFormat,
+};
 use winit::{
     dpi::PhysicalSize, error::OsError, event::WindowEvent, event_loop::ActiveEventLoop,
     window::Window,
@@ -66,7 +68,7 @@ impl WindowContext {
             .formats
             .iter()
             .copied()
-            .find(|f| f.is_srgb())
+            .find(TextureFormat::is_srgb)
             .unwrap_or(caps.formats[0]);
 
         let config = SurfaceConfiguration {

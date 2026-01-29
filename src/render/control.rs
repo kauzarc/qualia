@@ -1,6 +1,6 @@
 use crate::context::{GpuContext, GuiContext, WindowContext};
 
-use super::{render_frame, RenderError};
+use super::{RenderError, render_frame};
 
 pub struct ControlRenderer;
 

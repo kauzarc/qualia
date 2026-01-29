@@ -1,13 +1,10 @@
 use thiserror::Error;
 use tracing::debug;
 use wgpu::{Instance, InstanceDescriptor};
-use winit::{
-    event::WindowEvent,
-    event_loop::ActiveEventLoop,
-    window::WindowId,
-};
+use winit::{event::WindowEvent, event_loop::ActiveEventLoop, window::WindowId};
 
 use crate::{
+    audio::{AudioDriver, AudioDriverError},
     context::{
         GpuContext, GpuContextError, GuiContext, UnconfiguredWindow, WindowContext,
         WindowContextError,
@@ -17,6 +14,8 @@ use crate::{
 
 /// Main application state orchestrating the GPU and windows.
 pub struct Session {
+    audio_driver: AudioDriver,
+
     gpu: GpuContext,
 
     /// Main visual output.
@@ -39,6 +38,9 @@ pub enum SessionAction {
 
 #[derive(Debug, Error)]
 pub enum SessionError {
+    #[error("Failed to init audio driver: {0}")]
+    InitAudioDriver(#[from] AudioDriverError),
+
     #[error("Failed to init view window: {0}")]
     InitViewWindow(WindowContextError),
 
@@ -57,6 +59,9 @@ pub enum SessionError {
 
 impl Session {
     pub fn try_new(event_loop: &ActiveEventLoop) -> Result<Self, SessionError> {
+        debug!("Starting audio driver...");
+        let audio_driver = AudioDriver::try_new()?;
+
         let instance = Instance::new(&InstanceDescriptor::default());
 
         debug!("Creating windows...");
@@ -75,6 +80,7 @@ impl Session {
         let gui = GuiContext::new(&control.window, &gpu.device, control.config.format);
 
         Ok(Self {
+            audio_driver,
             gpu,
             view,
             control,

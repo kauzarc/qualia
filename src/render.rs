@@ -9,11 +9,7 @@ pub use view::ViewRenderer;
 
 use crate::context::{GpuContext, WindowContext};
 
-pub fn render_frame<F>(
-    gpu: &GpuContext,
-    target: &WindowContext,
-    f: F,
-) -> Result<(), RenderError>
+pub fn render_frame<F>(gpu: &GpuContext, target: &WindowContext, f: F) -> Result<(), RenderError>
 where
     F: FnOnce(&mut CommandEncoder, &TextureView),
 {

@@ -4,4 +4,4 @@ mod window;
 
 pub use gpu::{GpuContext, GpuContextError};
 pub use gui::GuiContext;
-pub use window::{WindowContext, WindowContextError};
+pub use window::{UnconfiguredWindow, WindowContext, WindowContextError};

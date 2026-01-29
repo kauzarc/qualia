@@ -1,8 +1,35 @@
 use std::sync::Arc;
 
 use thiserror::Error;
-use wgpu::{Adapter, CreateSurfaceError, Device, Surface, SurfaceConfiguration};
-use winit::{dpi::PhysicalSize, error::OsError, window::Window};
+use wgpu::{Adapter, CreateSurfaceError, Device, Instance, Surface, SurfaceConfiguration};
+use winit::{dpi::PhysicalSize, error::OsError, event_loop::ActiveEventLoop, window::Window};
+
+/// Window and surface before GPU configuration.
+pub struct UnconfiguredWindow {
+    window: Arc<Window>,
+    surface: Surface<'static>,
+}
+
+impl UnconfiguredWindow {
+    pub fn new(
+        event_loop: &ActiveEventLoop,
+        instance: &Instance,
+        title: &str,
+    ) -> Result<Self, WindowContextError> {
+        let attr = Window::default_attributes().with_title(title);
+        let window = Arc::new(event_loop.create_window(attr)?);
+        let surface = instance.create_surface(window.clone())?;
+        Ok(Self { window, surface })
+    }
+
+    pub fn surface(&self) -> &Surface<'static> {
+        &self.surface
+    }
+
+    pub fn configure(self, adapter: &Adapter, device: &Device) -> WindowContext {
+        WindowContext::from_raw(self.window, self.surface, adapter, device)
+    }
+}
 
 /// A renderable surface associated with a specific OS window.
 pub struct WindowContext {
@@ -21,7 +48,7 @@ pub enum WindowContextError {
 }
 
 impl WindowContext {
-    pub fn from_raw(
+    fn from_raw(
         window: Arc<Window>,
         surface: Surface<'static>,
         adapter: &Adapter,

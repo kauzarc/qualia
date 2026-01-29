@@ -1,16 +1,17 @@
-use std::sync::Arc;
-
 use thiserror::Error;
-use tracing::{debug, error};
-use wgpu::{Instance, InstanceDescriptor, Surface};
+use tracing::debug;
+use wgpu::{Instance, InstanceDescriptor};
 use winit::{
     event::WindowEvent,
     event_loop::ActiveEventLoop,
-    window::{Window, WindowId},
+    window::WindowId,
 };
 
 use crate::{
-    context::{GpuContext, GpuContextError, GuiContext, WindowContext, WindowContextError},
+    context::{
+        GpuContext, GpuContextError, GuiContext, UnconfiguredWindow, WindowContext,
+        WindowContextError,
+    },
     render::{ControlRenderer, RenderError, ViewRenderer},
 };
 
@@ -58,37 +59,28 @@ impl Session {
     pub fn try_new(event_loop: &ActiveEventLoop) -> Result<Self, SessionError> {
         let instance = Instance::new(&InstanceDescriptor::default());
 
-        debug!("Initializing view window...");
-        let (view_window, view_surface) =
-            Self::create_window_and_surface(event_loop, &instance, "Qualia Vision")
-                .map_err(SessionError::InitViewWindow)?;
-
-        debug!("Initializing control window...");
-        let (control_window, control_surface) =
-            Self::create_window_and_surface(event_loop, &instance, "Qualia Control")
-                .map_err(SessionError::InitControlWindow)?;
+        debug!("Creating windows...");
+        let view = UnconfiguredWindow::new(event_loop, &instance, "Qualia Vision")
+            .map_err(SessionError::InitViewWindow)?;
+        let control = UnconfiguredWindow::new(event_loop, &instance, "Qualia Control")
+            .map_err(SessionError::InitControlWindow)?;
 
         debug!("Initializing GPU...");
-        let gpu = GpuContext::try_new(&instance, &view_surface)?;
+        let gpu = GpuContext::try_new(&instance, view.surface())?;
 
-        let view_context =
-            WindowContext::from_raw(view_window, view_surface, &gpu.adapter, &gpu.device);
-        let control_context =
-            WindowContext::from_raw(control_window, control_surface, &gpu.adapter, &gpu.device);
+        debug!("Configuring windows...");
+        let view = view.configure(&gpu.adapter, &gpu.device);
+        let control = control.configure(&gpu.adapter, &gpu.device);
 
-        let gui_format = control_context.config.format;
-        let gui = GuiContext::new(&control_context.window, &gpu.device, gui_format);
-
-        let view_renderer = ViewRenderer;
-        let control_renderer = ControlRenderer;
+        let gui = GuiContext::new(&control.window, &gpu.device, control.config.format);
 
         Ok(Self {
             gpu,
-            view: view_context,
-            control: control_context,
+            view,
+            control,
             gui,
-            view_renderer,
-            control_renderer,
+            view_renderer: ViewRenderer,
+            control_renderer: ControlRenderer,
         })
     }
 
@@ -134,16 +126,5 @@ impl Session {
 
             _ => Ok(None),
         }
-    }
-
-    fn create_window_and_surface(
-        event_loop: &ActiveEventLoop,
-        instance: &Instance,
-        title: &str,
-    ) -> Result<(Arc<Window>, Surface<'static>), WindowContextError> {
-        let attr = Window::default_attributes().with_title(title);
-        let window = Arc::new(event_loop.create_window(attr)?);
-        let surface = instance.create_surface(window.clone())?;
-        Ok((window, surface))
     }
 }

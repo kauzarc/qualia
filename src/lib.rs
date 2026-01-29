@@ -40,7 +40,10 @@ impl ApplicationHandler for App {
         if let Some(session) = &mut self.session {
             match session.update(window_id, event) {
                 Ok(Some(action)) => match action {
-                    SessionAction::Exit => event_loop.exit(),
+                    SessionAction::Exit => {
+                        self.session = None;
+                        event_loop.exit();
+                    }
                 },
                 Err(e) => error!("Runtime error: {e}"),
                 _ => {}

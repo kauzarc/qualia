@@ -60,9 +60,9 @@ impl Session {
         let instance = Instance::new(&InstanceDescriptor::default());
 
         debug!("Creating windows...");
-        let view = UnconfiguredWindow::new(event_loop, &instance, "Qualia Vision")
+        let view = UnconfiguredWindow::try_new(event_loop, &instance, "Qualia Vision")
             .map_err(SessionError::InitViewWindow)?;
-        let control = UnconfiguredWindow::new(event_loop, &instance, "Qualia Control")
+        let control = UnconfiguredWindow::try_new(event_loop, &instance, "Qualia Control")
             .map_err(SessionError::InitControlWindow)?;
 
         debug!("Initializing GPU...");

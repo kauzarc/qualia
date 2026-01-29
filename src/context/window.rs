@@ -11,7 +11,7 @@ pub struct UnconfiguredWindow {
 }
 
 impl UnconfiguredWindow {
-    pub fn new(
+    pub fn try_new(
         event_loop: &ActiveEventLoop,
         instance: &Instance,
         title: &str,

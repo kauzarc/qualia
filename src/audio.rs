@@ -24,7 +24,7 @@ pub struct AudioDriver {
 }
 
 impl AudioDriver {
-    pub fn try_new(_samples_producer: Producer<AudioSamples>) -> Result<Self, AudioDriverError> {
+    pub fn try_new(_samples_tx: Producer<AudioSamples>) -> Result<Self, AudioDriverError> {
         let stop_flag = Arc::new(AtomicBool::new(false));
 
         let handle = {

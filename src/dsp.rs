@@ -9,11 +9,9 @@ use tracing::{error, info};
 
 use crate::audio::AudioSamples;
 
-// Constants (spec section 2.1)
 pub const MEL_BANDS: usize = 64;
 
 /// Audio state produced by DSP, consumed by Inference.
-/// 67 floats total: 64 Mel bands + RMS + Spectral Flux + ZCR
 #[derive(Clone, Copy)]
 pub struct AudioState {
     pub mel_bands: [f32; MEL_BANDS],

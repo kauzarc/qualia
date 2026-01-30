@@ -9,7 +9,6 @@ use tracing::{error, info};
 
 use crate::dsp::AudioState;
 
-// Constants (spec section 2.1)
 pub const MAX_ACTIONS: usize = 64;
 
 /// Visual parameters produced by Inference, consumed by Display.

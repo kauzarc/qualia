@@ -22,7 +22,7 @@ Asynchronous multi-threaded architecture separating temporal domains to guarante
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  DSP Thread (~90 Hz)                                                    │
 │  ┌─────────────┐                                                        │
-│  │  DspEngine  │  FFT, Mel spectrogram, RMS, ZCR, transient detection   │
+│  │  DspEngine  │  FFT, Mel spectrogram, energy, transient detection     │
 │  └──────┬──────┘                                                        │
 │         │ AudioState [67 floats] (rtrb)                                 │
 └─────────┼───────────────────────────────────────────────────────────────┘
@@ -61,10 +61,10 @@ Asynchronous multi-threaded architecture separating temporal domains to guarante
 | Module | Thread | Communication | Status |
 |--------|--------|---------------|--------|
 | **AudioDriver** | Audio | `rtrb` → DSP | Skeleton |
-| **DspEngine** | DSP | `rtrb` → Inference | Not started |
-| **Inference** | Inference | `rtrb` → Main | Not started |
+| **DspEngine** | DSP | `rtrb` → Inference | Skeleton |
+| **Inference** | Inference | `rtrb` → Main | Skeleton |
 | **Display** | Main | renders VisualParams | Basic infrastructure |
-| **Trainer** | Trainer | `mpsc` ← Main, `arc-swap` → Inference | Not started |
+| **Trainer** | Trainer | `mpsc` ← Main | Skeleton |
 
 ## Building
 
@@ -80,5 +80,5 @@ cargo run
 
 ## Dependencies
 
-- Rust 1.76+
+- Rust 1.85+ (edition 2024)
 - GPU with Vulkan/Metal/DX12 support

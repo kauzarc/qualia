@@ -9,7 +9,7 @@ use tracing::{error, info};
 
 pub const HOP_SIZE: usize = 512;
 
-/// Audio samples buffer sent from AudioDriver to DspEngine.
+/// Audio samples buffer sent from `AudioDriver` to `DspEngine`.
 pub type AudioSamples = [f32; HOP_SIZE];
 
 #[derive(Debug, Error)]

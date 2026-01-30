@@ -11,9 +11,11 @@ use crate::dsp::AudioState;
 
 pub const MAX_ACTIONS: usize = 64;
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Default)]
 pub struct ControlVoltage(f32);
 
+#[allow(dead_code)]
 impl ControlVoltage {
     pub fn new(value: f32) -> Option<Self> {
         if (0.0..=1.0).contains(&value) {
@@ -28,6 +30,7 @@ impl ControlVoltage {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct VisualParams {
     pub actions: [ControlVoltage; MAX_ACTIONS],

@@ -75,32 +75,36 @@ pub enum SessionAction {
 }
 
 #[derive(Debug, Error)]
-pub enum SessionError {
+pub enum SessionInitError {
     #[error("Failed to init audio driver: {0}")]
-    InitAudioDriver(#[from] AudioDriverError),
+    AudioDriver(#[from] AudioDriverError),
 
     #[error("Failed to init DSP engine: {0}")]
-    InitDspEngine(#[from] DspEngineError),
+    DspEngine(#[from] DspEngineError),
 
     #[error("Failed to init inference: {0}")]
-    InitInference(#[from] InferenceError),
+    Inference(#[from] InferenceError),
 
     #[error("Failed to init trainer: {0}")]
-    InitTrainer(#[from] TrainerError),
+    Trainer(#[from] TrainerError),
 
     #[error("Failed to init display: {0}")]
-    InitDisplay(#[from] DisplayError),
+    Display(#[from] DisplayError),
 }
 
 impl Session {
-    pub fn try_new(event_loop: &ActiveEventLoop) -> Result<Self, SessionError> {
+    pub fn try_new(event_loop: &ActiveEventLoop) -> Result<Self, SessionInitError> {
         let channels = Channels::new();
 
         let audio_driver = AudioDriver::try_new(channels.samples_producer)?;
         let dsp_engine = DspEngine::try_new(channels.samples_consumer, channels.state_producer)?;
         let inference = Inference::try_new(channels.state_consumer, channels.params_producer)?;
         let trainer = Trainer::try_new(channels.feedback_receiver)?;
-        let display = Display::try_new(event_loop, channels.params_consumer, channels.feedback_sender)?;
+        let display = Display::try_new(
+            event_loop,
+            channels.params_consumer,
+            channels.feedback_sender,
+        )?;
 
         Ok(Self {
             _audio_driver: audio_driver,
@@ -115,14 +119,12 @@ impl Session {
         &mut self,
         window_id: WindowId,
         event: &WindowEvent,
-    ) -> Result<Option<SessionAction>, SessionError> {
+    ) -> Result<Option<SessionAction>, DisplayError> {
         if matches!(event, WindowEvent::CloseRequested) {
             return Ok(Some(SessionAction::Exit));
         }
 
-        self.display
-            .handle_event(window_id, event)
-            .map_err(SessionError::from)?;
+        self.display.handle_event(window_id, event)?;
 
         Ok(None)
     }

@@ -11,7 +11,7 @@ use crate::audio::AudioSamples;
 
 pub const MEL_BANDS: usize = 64;
 
-/// Audio state produced by DSP, consumed by Inference.
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct AudioState {
     pub mel_bands: [f32; MEL_BANDS],

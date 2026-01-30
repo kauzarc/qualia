@@ -7,9 +7,11 @@ use std::thread::{self, JoinHandle};
 use thiserror::Error;
 use tracing::{error, info};
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub struct Reward(f32);
 
+#[allow(dead_code)]
 impl Reward {
     pub fn new(value: f32) -> Option<Self> {
         if (-1.0..=1.0).contains(&value) {
@@ -24,6 +26,7 @@ impl Reward {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub struct Feedback {
     pub reward: Reward,

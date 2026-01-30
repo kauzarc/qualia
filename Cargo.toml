@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 arc-swap = "1.8.0"
-burn = "0.19.1"
+ort = { version = "2.0.0-rc.11", features = ["training"] }
 cpal = "0.17.0"
 egui = "0.33.3"
 egui-wgpu = "0.33.3"

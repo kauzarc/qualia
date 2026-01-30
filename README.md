@@ -8,13 +8,63 @@ Qualia creates an AI layer between audio input and visual output. Instead of exp
 
 ## Architecture
 
-| Module | Responsibility | Status |
-|--------|----------------|--------|
-| **Audio** | Capture audio via OS callback | Skeleton |
-| **DSP** | FFT, Mel spectrogram, feature extraction | Not started |
-| **Inference** | Neural network (audio → visual params) | Not started |
-| **Display** | Window management, GPU rendering | Basic infrastructure |
-| **Trainer** | Background learning from user feedback | Not started |
+Asynchronous multi-threaded architecture separating temporal domains to guarantee low latency on the critical audio/visual path while allowing background training.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Audio Thread (Hard Real-time)                                          │
+│  ┌─────────────┐                                                        │
+│  │ AudioDriver │  cpal callback, zero-allocation                        │
+│  └──────┬──────┘                                                        │
+│         │ raw samples (rtrb)                                            │
+└─────────┼───────────────────────────────────────────────────────────────┘
+          ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  DSP Thread (~90 Hz)                                                    │
+│  ┌─────────────┐                                                        │
+│  │  DspEngine  │  FFT, Mel spectrogram, RMS, ZCR, transient detection   │
+│  └──────┬──────┘                                                        │
+│         │ AudioState [67 floats] (rtrb)                                 │
+└─────────┼───────────────────────────────────────────────────────────────┘
+          ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Inference Thread (>60 Hz)                                              │
+│  ┌─────────────┐                                                        │
+│  │  Inference  │  ONNX model forward pass (ort)                         │
+│  └──────┬──────┘                                                        │
+│         │ VisualParams [N floats] (rtrb)                                │
+└─────────┼───────────────────────────────────────────────────────────────┘
+          ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Main Thread (60 FPS)                                                   │
+│  ┌─────────────┐    ┌─────────────┐                                     │
+│  │   Display   │    │    egui     │  feedback controls                  │
+│  │   (wgpu)    │    │  (control)  │──────────────────┐                  │
+│  └─────────────┘    └─────────────┘                  │                  │
+└──────────────────────────────────────────────────────┼──────────────────┘
+                                                       │ Feedback (mpsc)
+┌──────────────────────────────────────────────────────┼──────────────────┐
+│  Trainer Thread (async, low priority)                ▼                  │
+│  ┌─────────────┐    ┌──────────────┐                                    │
+│  │   Trainer   │◄───│ ReplayBuffer │  history + delayed reward assign   │
+│  │    (ort)    │    │              │                                    │
+│  └──────┬──────┘    └──────────────┘                                    │
+│         │                                                               │
+│         │ export updated model                                          │
+│         ▼                                                               │
+│  Inference reloads via arc-swap                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Module Status
+
+| Module | Thread | Communication | Status |
+|--------|--------|---------------|--------|
+| **AudioDriver** | Audio | `rtrb` → DSP | Skeleton |
+| **DspEngine** | DSP | `rtrb` → Inference | Not started |
+| **Inference** | Inference | `rtrb` → Main | Not started |
+| **Display** | Main | renders VisualParams | Basic infrastructure |
+| **Trainer** | Trainer | `mpsc` ← Main, `arc-swap` → Inference | Not started |
 
 ## Building
 

@@ -7,10 +7,26 @@ use std::thread::{self, JoinHandle};
 use thiserror::Error;
 use tracing::{error, info};
 
-/// Feedback sent from Display to Trainer.
+#[derive(Clone, Copy, Debug)]
+pub struct Reward(f32);
+
+impl Reward {
+    pub fn new(value: f32) -> Option<Self> {
+        if (-1.0..=1.0).contains(&value) {
+            Some(Self(value))
+        } else {
+            None
+        }
+    }
+
+    pub fn get(self) -> f32 {
+        self.0
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Feedback {
-    pub value: f32, // [-1.0, 1.0] per spec
+    pub reward: Reward,
     pub timestamp: u64,
 }
 

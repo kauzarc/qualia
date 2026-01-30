@@ -11,11 +11,26 @@ use crate::dsp::AudioState;
 
 pub const MAX_ACTIONS: usize = 64;
 
-/// Visual parameters produced by Inference, consumed by Display.
-/// Normalized to [0.0, 1.0] per "Control Voltage" philosophy.
+#[derive(Clone, Copy, Default)]
+pub struct ControlVoltage(f32);
+
+impl ControlVoltage {
+    pub fn new(value: f32) -> Option<Self> {
+        if (0.0..=1.0).contains(&value) {
+            Some(Self(value))
+        } else {
+            None
+        }
+    }
+
+    pub fn get(self) -> f32 {
+        self.0
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct VisualParams {
-    pub actions: [f32; MAX_ACTIONS],
+    pub actions: [ControlVoltage; MAX_ACTIONS],
     pub num_actions: usize,
     pub is_transient: bool,
     pub timestamp: u64,
@@ -24,8 +39,8 @@ pub struct VisualParams {
 impl Default for VisualParams {
     fn default() -> Self {
         Self {
-            actions: [0.0; MAX_ACTIONS],
-            num_actions: 16, // MVP default
+            actions: [ControlVoltage::default(); MAX_ACTIONS],
+            num_actions: 16,
             is_transient: false,
             timestamp: 0,
         }

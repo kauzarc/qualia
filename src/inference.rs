@@ -1,3 +1,7 @@
+//! Neural network inference module.
+//!
+//! Runs the trained model to transform `AudioState` into `VisualParams`.
+
 use std::io;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -9,14 +13,17 @@ use tracing::{error, info};
 
 use crate::dsp::AudioState;
 
+/// Maximum number of visual control parameters.
 pub const MAX_ACTIONS: usize = 64;
 
+/// Normalized value in [0.0, 1.0] for shader control.
 #[allow(dead_code)]
 #[derive(Clone, Copy, Default)]
 pub struct ControlVoltage(f32);
 
 #[allow(dead_code)]
 impl ControlVoltage {
+    /// Creates a new `ControlVoltage` if value is in [0.0, 1.0].
     pub fn new(value: f32) -> Option<Self> {
         if (0.0..=1.0).contains(&value) {
             Some(Self(value))
@@ -25,11 +32,13 @@ impl ControlVoltage {
         }
     }
 
+    /// Returns the inner value.
     pub fn get(self) -> f32 {
         self.0
     }
 }
 
+/// Visual parameters produced by `Inference`, consumed by `Display`.
 #[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct VisualParams {
@@ -50,18 +59,23 @@ impl Default for VisualParams {
     }
 }
 
+/// Errors that can occur when initializing `Inference`.
 #[derive(Debug, Error)]
 pub enum InferenceError {
     #[error("Failed to spawn inference thread: {0}")]
     SpawnThread(#[from] io::Error),
 }
 
+/// Inference thread running the neural network model.
+///
+/// Consumes `AudioState` and produces `VisualParams` for the display.
 pub struct Inference {
     handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
 }
 
 impl Inference {
+    /// Creates and starts the inference thread.
     pub fn try_new(
         _state_consumer: Consumer<AudioState>,
         _params_producer: Producer<VisualParams>,

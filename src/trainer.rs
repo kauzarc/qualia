@@ -1,3 +1,8 @@
+//! Online learning module.
+//!
+//! Receives user feedback, maintains a replay buffer, and trains the model
+//! asynchronously without blocking the real-time audio/visual pipeline.
+
 use std::io;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -7,12 +12,14 @@ use std::thread::{self, JoinHandle};
 use thiserror::Error;
 use tracing::{error, info};
 
+/// User feedback value in [-1.0, 1.0].
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub struct Reward(f32);
 
 #[allow(dead_code)]
 impl Reward {
+    /// Creates a new `Reward` if value is in [-1.0, 1.0].
     pub fn new(value: f32) -> Option<Self> {
         if (-1.0..=1.0).contains(&value) {
             Some(Self(value))
@@ -21,11 +28,13 @@ impl Reward {
         }
     }
 
+    /// Returns the inner value.
     pub fn get(self) -> f32 {
         self.0
     }
 }
 
+/// User feedback event sent from `Display` to `Trainer`.
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub struct Feedback {
@@ -33,18 +42,23 @@ pub struct Feedback {
     pub timestamp: u64,
 }
 
+/// Errors that can occur when initializing `Trainer`.
 #[derive(Debug, Error)]
 pub enum TrainerError {
     #[error("Failed to spawn trainer thread: {0}")]
     SpawnThread(#[from] io::Error),
 }
 
+/// Background training thread.
+///
+/// Receives feedback, assigns credit to past actions, and updates the model.
 pub struct Trainer {
     handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
 }
 
 impl Trainer {
+    /// Creates and starts the trainer thread.
     pub fn try_new(_feedback_receiver: Receiver<Feedback>) -> Result<Self, TrainerError> {
         let stop_flag = Arc::new(AtomicBool::new(false));
 

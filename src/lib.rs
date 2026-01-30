@@ -1,3 +1,9 @@
+//! Qualia - Real-time visual generation engine driven by online learning.
+//!
+//! This crate implements an asynchronous multi-threaded architecture separating
+//! temporal domains to guarantee low latency on the audio/visual path while
+//! allowing background training.
+
 use tracing::error;
 use winit::{
     application::ApplicationHandler, event::WindowEvent, event_loop::ActiveEventLoop,
@@ -13,6 +19,7 @@ mod trainer;
 
 use session::{Session, SessionAction};
 
+/// Main application entry point implementing the winit event loop handler.
 #[derive(Default)]
 pub struct App {
     session: Option<Session>,

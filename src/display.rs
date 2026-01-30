@@ -1,3 +1,7 @@
+//! Display and rendering module.
+//!
+//! Manages two windows: the main visual output and the control panel.
+
 mod context;
 mod render;
 
@@ -18,6 +22,7 @@ use render::{ControlRenderer, RenderError, ViewRenderer};
 use crate::inference::VisualParams;
 use crate::trainer::Feedback;
 
+/// Display subsystem managing windows and GPU rendering.
 pub struct Display {
     gpu: GpuContext,
     view: WindowContext,
@@ -28,6 +33,7 @@ pub struct Display {
     _feedback_sender: Sender<Feedback>,
 }
 
+/// Errors that can occur during display operations.
 #[derive(Debug, Error)]
 pub enum DisplayError {
     #[error("Failed to init view window: {0}")]

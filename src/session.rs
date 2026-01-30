@@ -1,3 +1,7 @@
+//! Session orchestration module.
+//!
+//! Creates and connects all threads and communication channels.
+
 use std::sync::mpsc::{self, Receiver, Sender};
 
 use rtrb::{Consumer, Producer};
@@ -26,6 +30,7 @@ use crate::{
     trainer::{Feedback, Trainer, TrainerError},
 };
 
+/// Active session holding all threads and the display.
 pub struct Session {
     _audio_driver: AudioDriver,
     _dsp_engine: DspEngine,
@@ -69,11 +74,13 @@ impl Channels {
     }
 }
 
+/// Actions that can be requested by the session.
 #[derive(Debug)]
 pub enum SessionAction {
     Exit,
 }
 
+/// Errors that can occur when initializing a session.
 #[derive(Debug, Error)]
 pub enum SessionInitError {
     #[error("Failed to init audio driver: {0}")]
@@ -93,6 +100,7 @@ pub enum SessionInitError {
 }
 
 impl Session {
+    /// Creates a new session, initializing all threads and channels.
     pub fn try_new(event_loop: &ActiveEventLoop) -> Result<Self, SessionInitError> {
         let channels = Channels::new();
 
@@ -115,6 +123,7 @@ impl Session {
         })
     }
 
+    /// Handles a window event, returning an action if needed.
     pub fn update(
         &mut self,
         window_id: WindowId,

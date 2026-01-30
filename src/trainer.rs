@@ -1,45 +1,47 @@
 use std::io;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::Receiver;
 use std::thread::{self, JoinHandle};
 
-use rtrb::Producer;
 use thiserror::Error;
 use tracing::{error, info};
 
-pub const HOP_SIZE: usize = 512;
-
-/// Audio samples buffer sent from AudioDriver to DspEngine.
-pub type AudioSamples = [f32; HOP_SIZE];
+/// Feedback sent from Display to Trainer.
+#[derive(Clone, Copy, Debug)]
+pub struct Feedback {
+    pub value: f32, // [-1.0, 1.0] per spec
+    pub timestamp: u64,
+}
 
 #[derive(Debug, Error)]
-pub enum AudioDriverError {
-    #[error("Failed to spawn audio driver thread: {0}")]
+pub enum TrainerError {
+    #[error("Failed to spawn trainer thread: {0}")]
     SpawnThread(#[from] io::Error),
 }
 
-pub struct AudioDriver {
+pub struct Trainer {
     handle: Option<JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
 }
 
-impl AudioDriver {
-    pub fn try_new(_samples_producer: Producer<AudioSamples>) -> Result<Self, AudioDriverError> {
+impl Trainer {
+    pub fn try_new(_feedback_receiver: Receiver<Feedback>) -> Result<Self, TrainerError> {
         let stop_flag = Arc::new(AtomicBool::new(false));
 
         let handle = {
             let stop_flag = stop_flag.clone();
             thread::Builder::new()
-                .name("audio-driver".into())
+                .name("trainer".into())
                 .spawn(move || {
-                    info!("Audio driver thread started");
+                    info!("Trainer thread started");
 
                     while !stop_flag.load(Ordering::Relaxed) {
-                        // TODO: cpal capture or synthetic signal, push to samples_tx
-                        thread::sleep(std::time::Duration::from_millis(11));
+                        // TODO: receive feedback, update replay buffer, train model
+                        thread::sleep(std::time::Duration::from_millis(100));
                     }
 
-                    info!("Audio driver thread stopped");
+                    info!("Trainer thread stopped");
                 })?
         };
 
@@ -54,12 +56,12 @@ impl AudioDriver {
         if let Some(handle) = self.handle.take()
             && handle.join().is_err()
         {
-            error!("Audio driver thread panicked");
+            error!("Trainer thread panicked");
         }
     }
 }
 
-impl Drop for AudioDriver {
+impl Drop for Trainer {
     fn drop(&mut self) {
         self.stop();
     }

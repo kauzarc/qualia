@@ -6,7 +6,10 @@ use winit::{
 
 mod audio;
 mod display;
+mod dsp;
+mod inference;
 mod session;
+mod trainer;
 
 use session::{Session, SessionAction};
 

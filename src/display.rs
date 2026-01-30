@@ -1,6 +1,9 @@
 mod context;
 mod render;
 
+use std::sync::mpsc::Sender;
+
+use rtrb::Consumer;
 use thiserror::Error;
 use tracing::debug;
 use wgpu::{Instance, InstanceDescriptor};
@@ -12,12 +15,17 @@ use context::{
 };
 use render::{ControlRenderer, RenderError, ViewRenderer};
 
+use crate::inference::VisualParams;
+use crate::trainer::Feedback;
+
 pub struct Display {
     gpu: GpuContext,
     view: WindowContext,
     control: ControlWindow,
     view_renderer: ViewRenderer,
     control_renderer: ControlRenderer,
+    _params_consumer: Consumer<VisualParams>,
+    _feedback_sender: Sender<Feedback>,
 }
 
 #[derive(Debug, Error)]
@@ -36,7 +44,11 @@ pub enum DisplayError {
 }
 
 impl Display {
-    pub fn try_new(event_loop: &ActiveEventLoop) -> Result<Self, DisplayError> {
+    pub fn try_new(
+        event_loop: &ActiveEventLoop,
+        params_consumer: Consumer<VisualParams>,
+        feedback_sender: Sender<Feedback>,
+    ) -> Result<Self, DisplayError> {
         let instance = Instance::new(&InstanceDescriptor::default());
 
         debug!("Creating windows...");
@@ -68,6 +80,8 @@ impl Display {
             control,
             view_renderer: ViewRenderer,
             control_renderer: ControlRenderer,
+            _params_consumer: params_consumer,
+            _feedback_sender: feedback_sender,
         })
     }
 

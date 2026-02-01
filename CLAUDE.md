@@ -40,11 +40,23 @@ Trainer Thread (async, low priority)
 
 ### Module Structure
 
-- `session.rs` - Orchestrates all threads and channels
-- `audio.rs` - AudioDriver for hard real-time audio capture (cpal)
-- `dsp.rs` - DspEngine for FFT, Mel spectrogram, feature extraction
-- `inference.rs` - ONNX model forward pass (ort)
-- `trainer.rs` - Online learning with replay buffer
+- `session.rs` - Orchestrates all threads
+- `channel/` - Pipeline communication infrastructure
+  - `pipe.rs` - `Processor` trait and `Pipe<P>` for "drain to latest" buffer strategy
+  - `channels.rs` - `Channels` struct creates all ring buffers
+- `audio/` - Hard real-time audio capture (cpal)
+  - `driver.rs` - `AudioDriver` with `HopAccumulator`
+- `dsp/` - Digital signal processing
+  - `engine.rs` - `DspEngine` thread management
+  - `processor.rs` - `DspProcessor` implements `Processor`
+  - `state.rs` - `AudioState` (67 floats)
+- `inference/` - Neural network inference
+  - `engine.rs` - `Inference` thread management
+  - `model.rs` - `InferenceModel` trait (infer, output_size, reward)
+  - `processor.rs` - `InferenceProcessor` wraps model for `Pipe`
+  - `passthrough.rs` - `PassthroughModel` (MVP placeholder)
+  - `params.rs` - `VisualParams`, `ControlVoltage`
+- `trainer.rs` - Online learning with replay buffer (skeleton)
 - `display/` - GPU rendering (wgpu) and control panel (egui)
   - `context/` - GPU, window, and GUI context management
   - `render/` - ViewRenderer (visuals) and ControlRenderer (egui)
@@ -52,7 +64,7 @@ Trainer Thread (async, low priority)
 ### Key Constants
 
 ```rust
-// session.rs
+// channel/channels.rs
 const DSP_RATE_HZ: usize = 90;
 const INFERENCE_RATE_HZ: usize = 60;
 
@@ -62,7 +74,7 @@ pub const HOP_SIZE: usize = 512;  // ~10.7ms at 48kHz
 // dsp.rs
 pub const MEL_BANDS: usize = 64;
 
-// inference.rs
+// inference/params.rs
 pub const MAX_ACTIONS: usize = 64;
 ```
 
@@ -76,6 +88,12 @@ pub const MAX_ACTIONS: usize = 64;
 - **rtrb ring buffers** - Lock-free for high-frequency data (samples, audio state, visual params)
 - **std::mpsc** - For low-frequency feedback events
 - **arc-swap** - Atomic model reloading
+
+### Key Abstractions
+
+- **`Processor` trait** - Generic transform with `Input`/`Output` associated types
+- **`Pipe<P: Processor>`** - Connects ring buffers with "drain to latest" strategy
+- **`InferenceModel` trait** - Domain-specific: `infer()`, `output_size()`, `reward()`
 
 ### Design Principles
 

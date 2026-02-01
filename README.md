@@ -61,8 +61,8 @@ Asynchronous multi-threaded architecture separating temporal domains to guarante
 | Module | Thread | Communication | Status |
 |--------|--------|---------------|--------|
 | **AudioDriver** | Audio | `rtrb` → DSP | Basic |
-| **DspEngine** | DSP | `rtrb` → Inference | Skeleton |
-| **Inference** | Inference | `rtrb` → Main | Skeleton |
+| **DspEngine** | DSP | `rtrb` → Inference | Basic |
+| **Inference** | Inference | `rtrb` → Main | Basic |
 | **Display** | Main | renders VisualParams | Basic infrastructure |
 | **Trainer** | Trainer | `mpsc` ← Main | Skeleton |
 

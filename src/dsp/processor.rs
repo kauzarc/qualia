@@ -40,15 +40,17 @@ impl Processor for DspProcessor {
         AudioState {
             mel_bands,
             energy,
-            spectral_flux,
-            zero_crossing_rate,
+            _spectral_flux: spectral_flux,
+            _zero_crossing_rate: zero_crossing_rate,
             is_transient,
             timestamp,
         }
     }
 }
 
+#[allow(clippy::unused_self)]
 impl DspProcessor {
+    #[allow(clippy::cast_precision_loss)]
     fn compute_energy(&self, samples: &AudioSamples) -> f32 {
         let sum_squares: f32 = samples.iter().map(|s| s * s).sum();
         (sum_squares / HOP_SIZE as f32).sqrt()

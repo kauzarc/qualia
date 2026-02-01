@@ -40,7 +40,7 @@ impl DspEngine {
             let stop_flag = stop_flag.clone();
             thread::Builder::new()
                 .name("dsp-engine".into())
-                .spawn(move || Self::run(stop_flag, samples_consumer, state_producer))?
+                .spawn(move || Self::run(&stop_flag, samples_consumer, state_producer))?
         };
 
         Ok(Self {
@@ -50,7 +50,7 @@ impl DspEngine {
     }
 
     fn run(
-        stop_flag: Arc<AtomicBool>,
+        stop_flag: &AtomicBool,
         samples_consumer: Consumer<AudioSamples>,
         state_producer: Producer<AudioState>,
     ) {

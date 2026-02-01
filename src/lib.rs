@@ -11,6 +11,7 @@ use winit::{
 };
 
 mod audio;
+mod channel;
 mod display;
 mod dsp;
 mod inference;

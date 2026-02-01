@@ -5,11 +5,11 @@ use std::thread::{self, JoinHandle};
 
 use rtrb::{Consumer, Producer};
 use thiserror::Error;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::audio::AudioSamples;
+use crate::channel::Pipe;
 
-use super::pipe::Pipe;
 use super::processor::DspProcessor;
 use super::state::AudioState;
 
@@ -59,8 +59,10 @@ impl DspEngine {
         let mut pipe = Pipe::new(DspProcessor::new(), samples_consumer, state_producer);
 
         while !stop_flag.load(Ordering::Relaxed) {
-            if !pipe.tick() {
-                thread::sleep(std::time::Duration::from_millis(1));
+            match pipe.tick() {
+                Ok(true) => {}
+                Ok(false) => thread::sleep(std::time::Duration::from_millis(1)),
+                Err(_) => warn!("AudioState buffer full, dropping frame"),
             }
         }
 

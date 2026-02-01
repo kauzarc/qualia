@@ -1,15 +1,11 @@
 use crate::audio::{AudioSamples, HOP_SIZE};
+use crate::channel::Processor;
 
 use super::MEL_BANDS;
 use super::state::AudioState;
 
 /// Threshold for transient detection based on energy delta.
 const TRANSIENT_THRESHOLD: f32 = 0.1;
-
-/// Transforms audio samples into audio state.
-pub trait Processor {
-    fn process(&mut self, samples: AudioSamples) -> AudioState;
-}
 
 /// Handles DSP computations: FFT, Mel spectrogram, and feature extraction.
 pub struct DspProcessor {
@@ -27,6 +23,9 @@ impl DspProcessor {
 }
 
 impl Processor for DspProcessor {
+    type Input = AudioSamples;
+    type Output = AudioState;
+
     fn process(&mut self, samples: AudioSamples) -> AudioState {
         let energy = self.compute_energy(&samples);
         let mel_bands = self.compute_mel_bands(&samples);

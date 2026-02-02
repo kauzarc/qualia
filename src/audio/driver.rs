@@ -61,6 +61,8 @@ impl AudioDriver {
     }
 
     /// Builds the cpal input stream with sample accumulation.
+    ///
+    /// Captures as f32 (hardware native) and converts to f64 for processing.
     fn build_stream(
         device: &Device,
         config: &StreamConfig,
@@ -70,9 +72,9 @@ impl AudioDriver {
 
         device.build_input_stream(
             config,
-            move |data, _info| {
+            move |data: &[f32], _info| {
                 for &sample in data {
-                    if let Some(hop) = accumulator.accumulate(sample)
+                    if let Some(hop) = accumulator.accumulate(f64::from(sample))
                         && producer.push(hop).is_err()
                     {
                         warn!("Sample buffer full, dropping frame");

@@ -107,9 +107,6 @@ pub struct ControlWindow {
 
 impl ControlWindow {
     pub fn handle_event(&mut self, event: &WindowEvent) -> bool {
-        self.gui
-            .state
-            .on_window_event(&self.window.window, event)
-            .consumed
+        self.gui.handle_event(&self.window.window, event)
     }
 }

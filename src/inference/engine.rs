@@ -6,7 +6,9 @@ use std::thread::{self, JoinHandle};
 use rtrb::{Consumer, Producer};
 use thiserror::Error;
 use tracing::{error, info, warn};
+use winit::event_loop::EventLoopProxy;
 
+use crate::AppEvent;
 use crate::channel::Pipe;
 use crate::dsp::AudioState;
 
@@ -32,6 +34,7 @@ impl Inference {
     pub fn try_new(
         state_consumer: Consumer<AudioState>,
         params_producer: Producer<VisualParams>,
+        proxy: EventLoopProxy<AppEvent>,
     ) -> Result<Self, InferenceError> {
         let stop_flag = Arc::new(AtomicBool::new(false));
 
@@ -39,7 +42,7 @@ impl Inference {
             let stop_flag = stop_flag.clone();
             thread::Builder::new()
                 .name("inference".into())
-                .spawn(move || Self::run(&stop_flag, state_consumer, params_producer))?
+                .spawn(move || Self::run(&stop_flag, state_consumer, params_producer, proxy))?
         };
 
         Ok(Self {
@@ -52,6 +55,7 @@ impl Inference {
         stop_flag: &AtomicBool,
         state_consumer: Consumer<AudioState>,
         params_producer: Producer<VisualParams>,
+        proxy: EventLoopProxy<AppEvent>,
     ) {
         info!("Inference thread started");
 
@@ -61,7 +65,12 @@ impl Inference {
 
         while !stop_flag.load(Ordering::Relaxed) {
             match pipe.tick() {
-                Ok(true) => {}
+                Ok(true) => {
+                    if proxy.send_event(AppEvent::VisualParamsProduced).is_err() {
+                        error!("Event loop closed, stopping inference");
+                        break;
+                    }
+                }
                 Ok(false) => thread::sleep(std::time::Duration::from_millis(1)),
                 Err(_) => warn!("VisualParams buffer full, dropping frame"),
             }

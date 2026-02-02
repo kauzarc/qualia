@@ -102,7 +102,7 @@ impl Display {
     }
 
     /// Drains the params consumer, keeping only the latest value.
-    fn drain_params(&mut self) {
+    pub fn drain_params(&mut self) {
         while let Ok(params) = self.params_consumer.pop() {
             self.current_params = params;
         }
@@ -131,7 +131,6 @@ impl Display {
 
             WindowEvent::RedrawRequested => {
                 if is_view {
-                    self.drain_params();
                     self.view_renderer
                         .render(&self.gpu, &self.view, &self.current_params)?;
                 } else if is_control {

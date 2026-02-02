@@ -6,7 +6,9 @@
 
 use tracing::error;
 use winit::{
-    application::ApplicationHandler, event::WindowEvent, event_loop::ActiveEventLoop,
+    application::ApplicationHandler,
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, EventLoopProxy},
     window::WindowId,
 };
 
@@ -18,21 +20,37 @@ mod inference;
 mod session;
 mod trainer;
 
-use session::{Session, SessionAction};
+use session::{Session, SessionAction, SessionEvent};
+
+/// Custom events for cross-thread communication with the event loop.
+#[derive(Debug, Clone)]
+pub enum AppEvent {
+    /// Inference produced new visual params.
+    VisualParamsProduced,
+}
 
 /// Main application entry point implementing the winit event loop handler.
-#[derive(Default)]
 pub struct App {
+    proxy: EventLoopProxy<AppEvent>,
     session: Option<Session>,
 }
 
-impl ApplicationHandler for App {
+impl App {
+    pub fn new(proxy: EventLoopProxy<AppEvent>) -> Self {
+        Self {
+            proxy,
+            session: None,
+        }
+    }
+}
+
+impl ApplicationHandler<AppEvent> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.session.is_some() {
             return;
         }
 
-        match Session::try_new(event_loop) {
+        match Session::try_new(event_loop, self.proxy.clone()) {
             Ok(session) => self.session = Some(session),
             Err(err) => {
                 error!("Fatal error initializing session: {err}");
@@ -41,23 +59,39 @@ impl ApplicationHandler for App {
         }
     }
 
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: AppEvent) {
+        self.handle_session_event(event_loop, SessionEvent::App(event));
+    }
+
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,
         window_id: WindowId,
         event: WindowEvent,
     ) {
-        if let Some(session) = &mut self.session {
-            match session.update(window_id, &event) {
-                Ok(Some(action)) => match action {
-                    SessionAction::Exit => {
-                        self.session = None;
-                        event_loop.exit();
-                    }
-                },
-                Err(e) => error!("Runtime error: {e}"),
-                _ => {}
+        self.handle_session_event(
+            event_loop,
+            SessionEvent::Window {
+                id: window_id,
+                event: &event,
+            },
+        );
+    }
+}
+
+impl App {
+    fn handle_session_event(&mut self, event_loop: &ActiveEventLoop, event: SessionEvent) {
+        let Some(session) = &mut self.session else {
+            return;
+        };
+
+        match session.handle_event(event) {
+            Ok(Some(SessionAction::Exit)) => {
+                self.session = None;
+                event_loop.exit();
             }
+            Ok(None) => {}
+            Err(e) => error!("Runtime error: {e}"),
         }
     }
 }

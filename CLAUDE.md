@@ -22,7 +22,7 @@ Qualia is a real-time visual generation engine for VJing that uses online learni
 
 ```
 Audio Thread (hard real-time, cpal)
-    │ raw samples [f32; 512] via rtrb
+    │ raw samples [f64; 512] via rtrb
     ▼
 DSP Thread (~90 Hz)
     │ AudioState [67 floats] via rtrb
@@ -80,7 +80,7 @@ pub const MAX_ACTIONS: usize = 64;
 
 ### Type-Safe Domain Values
 
-- `ControlVoltage(f32)` - Normalized [0.0, 1.0] for shader parameters
+- `ControlVoltage(f64)` - Normalized [0.0, 1.0] for shader parameters
 - `Reward(f32)` - User feedback [-1.0, 1.0]
 
 ### Communication Patterns

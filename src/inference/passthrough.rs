@@ -34,10 +34,10 @@ impl InferenceModel for PassthroughModel {
         actions[3] = ControlVoltage::clamped(state.mel_bands[63]); // high freq
 
         VisualParams {
-            _actions: actions,
-            _num_actions: self.output_size,
-            _is_transient: state.is_transient,
-            _timestamp: state.timestamp,
+            actions,
+            num_actions: self.output_size,
+            is_transient: state.is_transient,
+            timestamp: state.timestamp,
         }
     }
 

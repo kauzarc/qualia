@@ -29,7 +29,8 @@ pub struct Display {
     control: ControlWindow,
     view_renderer: ViewRenderer,
     control_renderer: ControlRenderer,
-    _params_consumer: Consumer<VisualParams>,
+    params_consumer: Consumer<VisualParams>,
+    current_params: VisualParams,
     _feedback_sender: Sender<Feedback>,
 }
 
@@ -84,9 +85,10 @@ impl Display {
             gpu,
             view,
             control,
-            view_renderer: ViewRenderer,
+            view_renderer: ViewRenderer::new(),
             control_renderer: ControlRenderer,
-            _params_consumer: params_consumer,
+            params_consumer,
+            current_params: VisualParams::default(),
             _feedback_sender: feedback_sender,
         })
     }
@@ -97,6 +99,13 @@ impl Display {
 
     pub fn control_window_id(&self) -> WindowId {
         self.control.window.window.id()
+    }
+
+    /// Drains the params consumer, keeping only the latest value.
+    fn drain_params(&mut self) {
+        while let Ok(params) = self.params_consumer.pop() {
+            self.current_params = params;
+        }
     }
 
     pub fn handle_event(
@@ -122,7 +131,9 @@ impl Display {
 
             WindowEvent::RedrawRequested => {
                 if is_view {
-                    self.view_renderer.render(&self.gpu, &self.view)?;
+                    self.drain_params();
+                    self.view_renderer
+                        .render(&self.gpu, &self.view, &self.current_params)?;
                 } else if is_control {
                     self.control_renderer.render(&self.gpu, &mut self.control)?;
                 }

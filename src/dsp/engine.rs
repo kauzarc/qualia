@@ -36,12 +36,13 @@ impl DspEngine {
     ) -> Result<Self, DspEngineError> {
         let stop_flag = Arc::new(AtomicBool::new(false));
 
-        let handle = {
-            let stop_flag = stop_flag.clone();
-            thread::Builder::new()
-                .name("dsp-engine".into())
-                .spawn(move || Self::run(&stop_flag, samples_consumer, state_producer))?
-        };
+        let handle = thread::Builder::new()
+            .name("dsp-engine".into())
+            .spawn(Self::thread_body(
+                stop_flag.clone(),
+                samples_consumer,
+                state_producer,
+            ))?;
 
         Ok(Self {
             handle: Some(handle),
@@ -49,24 +50,26 @@ impl DspEngine {
         })
     }
 
-    fn run(
-        stop_flag: &AtomicBool,
+    fn thread_body(
+        stop_flag: Arc<AtomicBool>,
         samples_consumer: Consumer<AudioSamples>,
         state_producer: Producer<AudioState>,
-    ) {
-        info!("DSP engine thread started");
+    ) -> impl FnOnce() {
+        move || {
+            info!("DSP engine thread started");
 
-        let mut pipe = Pipe::new(DspProcessor::new(), samples_consumer, state_producer);
+            let mut pipe = Pipe::new(DspProcessor::new(), samples_consumer, state_producer);
 
-        while !stop_flag.load(Ordering::Relaxed) {
-            match pipe.tick() {
-                Ok(true) => {}
-                Ok(false) => thread::sleep(std::time::Duration::from_millis(1)),
-                Err(_) => warn!("AudioState buffer full, dropping frame"),
+            while !stop_flag.load(Ordering::Relaxed) {
+                match pipe.tick() {
+                    Ok(true) => {}
+                    Ok(false) => thread::sleep(std::time::Duration::from_millis(1)),
+                    Err(_) => warn!("AudioState buffer full, dropping frame"),
+                }
             }
-        }
 
-        info!("DSP engine thread stopped");
+            info!("DSP engine thread stopped");
+        }
     }
 
     fn stop(&mut self) {

@@ -23,7 +23,7 @@ impl HopAccumulator {
     }
 
     /// Accumulates a sample, returning a complete hop if ready.
-    fn accumulate(&mut self, sample: f32) -> Option<AudioSamples> {
+    fn accumulate(&mut self, sample: f64) -> Option<AudioSamples> {
         self.buffer[self.pos] = sample;
         self.pos += 1;
 
@@ -70,7 +70,7 @@ impl AudioDriver {
 
         device.build_input_stream(
             config,
-            move |data: &[f32], _info| {
+            move |data, _info| {
                 for &sample in data {
                     if let Some(hop) = accumulator.accumulate(sample)
                         && producer.push(hop).is_err()

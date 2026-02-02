@@ -38,12 +38,14 @@ impl Inference {
     ) -> Result<Self, InferenceError> {
         let stop_flag = Arc::new(AtomicBool::new(false));
 
-        let handle = {
-            let stop_flag = stop_flag.clone();
-            thread::Builder::new()
-                .name("inference".into())
-                .spawn(move || Self::run(&stop_flag, state_consumer, params_producer, proxy))?
-        };
+        let handle = thread::Builder::new()
+            .name("inference".into())
+            .spawn(Self::thread_body(
+                stop_flag.clone(),
+                state_consumer,
+                params_producer,
+                proxy,
+            ))?;
 
         Ok(Self {
             handle: Some(handle),
@@ -51,32 +53,34 @@ impl Inference {
         })
     }
 
-    fn run(
-        stop_flag: &AtomicBool,
+    fn thread_body(
+        stop_flag: Arc<AtomicBool>,
         state_consumer: Consumer<AudioState>,
         params_producer: Producer<VisualParams>,
         proxy: EventLoopProxy<AppEvent>,
-    ) {
-        info!("Inference thread started");
+    ) -> impl FnOnce() {
+        move || {
+            info!("Inference thread started");
 
-        let model = PassthroughModel::new(16);
-        let processor = InferenceProcessor::new(model);
-        let mut pipe = Pipe::new(processor, state_consumer, params_producer);
+            let model = PassthroughModel::new(16);
+            let processor = InferenceProcessor::new(model);
+            let mut pipe = Pipe::new(processor, state_consumer, params_producer);
 
-        while !stop_flag.load(Ordering::Relaxed) {
-            match pipe.tick() {
-                Ok(true) => {
-                    if proxy.send_event(AppEvent::VisualParamsProduced).is_err() {
-                        error!("Event loop closed, stopping inference");
-                        break;
+            while !stop_flag.load(Ordering::Relaxed) {
+                match pipe.tick() {
+                    Ok(true) => {
+                        if proxy.send_event(AppEvent::VisualParamsProduced).is_err() {
+                            error!("Event loop closed, stopping inference");
+                            break;
+                        }
                     }
+                    Ok(false) => thread::sleep(std::time::Duration::from_millis(1)),
+                    Err(_) => warn!("VisualParams buffer full, dropping frame"),
                 }
-                Ok(false) => thread::sleep(std::time::Duration::from_millis(1)),
-                Err(_) => warn!("VisualParams buffer full, dropping frame"),
             }
-        }
 
-        info!("Inference thread stopped");
+            info!("Inference thread stopped");
+        }
     }
 
     fn stop(&mut self) {

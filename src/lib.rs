@@ -36,6 +36,7 @@ pub struct App {
 }
 
 impl App {
+    #[must_use]
     pub fn new(proxy: EventLoopProxy<AppEvent>) -> Self {
         Self {
             proxy,

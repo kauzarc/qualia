@@ -93,6 +93,7 @@ impl Session {
     }
 
     /// Handles an event, returning an action if needed.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn handle_event(
         &mut self,
         event: SessionEvent,

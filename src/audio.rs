@@ -13,4 +13,4 @@ pub use error::AudioDriverError;
 pub const HOP_SIZE: usize = 512;
 
 /// Audio samples buffer sent from `AudioDriver` to `DspEngine`.
-pub type AudioSamples = [f32; HOP_SIZE];
+pub type AudioSamples = [f64; HOP_SIZE];

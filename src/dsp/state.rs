@@ -3,10 +3,10 @@ use super::MEL_BANDS;
 /// Audio features extracted by `DspEngine`, consumed by `Inference`.
 #[derive(Clone, Copy)]
 pub struct AudioState {
-    pub mel_bands: [f32; MEL_BANDS],
-    pub energy: f32,
-    pub _spectral_flux: f32,
-    pub _zero_crossing_rate: f32,
+    pub mel_bands: [f64; MEL_BANDS],
+    pub energy: f64,
+    pub _spectral_flux: f64,
+    pub _zero_crossing_rate: f64,
     pub is_transient: bool,
     pub timestamp: u64,
 }

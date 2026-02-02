@@ -5,12 +5,12 @@ use super::MEL_BANDS;
 use super::state::AudioState;
 
 /// Threshold for transient detection based on energy delta.
-const TRANSIENT_THRESHOLD: f32 = 0.1;
+const TRANSIENT_THRESHOLD: f64 = 0.1;
 
 /// Handles DSP computations: FFT, Mel spectrogram, and feature extraction.
 pub struct DspProcessor {
     timestamp: u64,
-    prev_energy: f32,
+    prev_energy: f64,
 }
 
 impl DspProcessor {
@@ -51,27 +51,27 @@ impl Processor for DspProcessor {
 #[allow(clippy::unused_self)]
 impl DspProcessor {
     #[allow(clippy::cast_precision_loss)]
-    fn compute_energy(&self, samples: &AudioSamples) -> f32 {
-        let sum_squares: f32 = samples.iter().map(|s| s * s).sum();
-        (sum_squares / HOP_SIZE as f32).sqrt()
+    fn compute_energy(&self, samples: &AudioSamples) -> f64 {
+        let sum_squares: f64 = samples.iter().map(|s| s * s).sum();
+        (sum_squares / HOP_SIZE as f64).sqrt()
     }
 
-    fn compute_mel_bands(&self, _samples: &AudioSamples) -> [f32; MEL_BANDS] {
+    fn compute_mel_bands(&self, _samples: &AudioSamples) -> [f64; MEL_BANDS] {
         // TODO: FFT -> Mel filterbank
         [0.0; MEL_BANDS]
     }
 
-    fn compute_spectral_flux(&self, _samples: &AudioSamples) -> f32 {
+    fn compute_spectral_flux(&self, _samples: &AudioSamples) -> f64 {
         // TODO: compute spectral flux from FFT magnitude difference
         0.0
     }
 
-    fn compute_zero_crossing_rate(&self, _samples: &AudioSamples) -> f32 {
+    fn compute_zero_crossing_rate(&self, _samples: &AudioSamples) -> f64 {
         // TODO: count zero crossings / sample count
         0.0
     }
 
-    fn detect_transient(&self, energy: f32) -> bool {
+    fn detect_transient(&self, energy: f64) -> bool {
         energy - self.prev_energy > TRANSIENT_THRESHOLD
     }
 }

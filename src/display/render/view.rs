@@ -11,6 +11,7 @@ impl ViewRenderer {
         Self
     }
 
+    #[allow(clippy::unused_self)]
     pub fn render(
         &mut self,
         gpu: &GpuContext,
@@ -18,9 +19,9 @@ impl ViewRenderer {
         params: &VisualParams,
     ) -> Result<(), RenderError> {
         // Use first 3 params as RGB
-        let r = params.actions[0].get() as f64;
-        let g = params.actions[1].get() as f64;
-        let b = params.actions[2].get() as f64;
+        let r = params.actions[0].get();
+        let g = params.actions[1].get();
+        let b = params.actions[2].get();
 
         render_frame(gpu, target, |encoder, view| {
             Self::clear_screen(encoder, view, Color { r, g, b, a: 1.0 });

@@ -2,22 +2,28 @@
 //!
 //! Manages two windows: the main visual output and the control panel.
 
-mod context;
-mod render;
+mod control;
+mod gpu;
+mod view;
+mod window;
 
 use std::sync::mpsc::Sender;
 
+use egui::CentralPanel;
 use rtrb::Consumer;
 use thiserror::Error;
 use tracing::debug;
-use wgpu::{Instance, InstanceDescriptor};
+use wgpu::{
+    CommandEncoder, CommandEncoderDescriptor, Instance, InstanceDescriptor, SurfaceError,
+    TextureView, TextureViewDescriptor,
+};
 use winit::{event::WindowEvent, event_loop::ActiveEventLoop, window::WindowId};
 
-use context::{
-    ControlWindow, GpuContext, GpuContextError, GuiContext, UnconfiguredWindow, WindowContext,
-    WindowContextError,
-};
-use render::{ControlRenderer, RenderError, ViewRenderer};
+use control::{ControlWindow, GuiContext};
+pub use gpu::GpuContext;
+use gpu::GpuContextError;
+use view::ViewWindow;
+use window::{UnconfiguredWindow, WindowContext, WindowError};
 
 use crate::inference::VisualParams;
 use crate::trainer::Feedback;
@@ -25,10 +31,8 @@ use crate::trainer::Feedback;
 /// Display subsystem managing windows and GPU rendering.
 pub struct Display {
     gpu: GpuContext,
-    view: WindowContext,
+    view: ViewWindow,
     control: ControlWindow,
-    view_renderer: ViewRenderer,
-    control_renderer: ControlRenderer,
     params_consumer: Consumer<VisualParams>,
     current_params: VisualParams,
     _feedback_sender: Sender<Feedback>,
@@ -38,16 +42,41 @@ pub struct Display {
 #[derive(Debug, Error)]
 pub enum DisplayError {
     #[error("Failed to init view window: {0}")]
-    InitViewWindow(WindowContextError),
+    InitViewWindow(WindowError),
 
     #[error("Failed to init control window: {0}")]
-    InitControlWindow(WindowContextError),
+    InitControlWindow(WindowError),
 
     #[error("Failed to init GPU: {0}")]
     InitGpu(#[from] GpuContextError),
 
     #[error("Error while rendering: {0}")]
     Render(#[from] RenderError),
+}
+
+#[derive(Debug, Error)]
+pub enum RenderError {
+    #[error("Failed to request next texture: {0}")]
+    GetFrame(#[from] SurfaceError),
+}
+
+/// Acquires a frame, runs the render function, and presents.
+fn render_frame<F>(gpu: &GpuContext, target: &WindowContext, f: F) -> Result<(), RenderError>
+where
+    F: FnOnce(&mut CommandEncoder, &TextureView),
+{
+    let frame = target.surface.get_current_texture()?;
+    let view = frame.texture.create_view(&TextureViewDescriptor::default());
+    let mut encoder = gpu
+        .device
+        .create_command_encoder(&CommandEncoderDescriptor::default());
+
+    f(&mut encoder, &view);
+
+    gpu.queue.submit(Some(encoder.finish()));
+    frame.present();
+    target.window.request_redraw();
+    Ok(())
 }
 
 impl Display {
@@ -68,25 +97,19 @@ impl Display {
         let gpu = GpuContext::try_new(&instance, view.surface())?;
 
         debug!("Configuring windows...");
-        let view = view.configure(&gpu.adapter, &gpu.device);
+        let view_window = view.configure(&gpu.adapter, &gpu.device);
         let control_window = control.configure(&gpu.adapter, &gpu.device);
+
         let gui = GuiContext::new(
             &control_window.window,
             &gpu.device,
             control_window.config.format,
         );
 
-        let control = ControlWindow {
-            window: control_window,
-            gui,
-        };
-
         Ok(Self {
             gpu,
-            view,
-            control,
-            view_renderer: ViewRenderer::new(),
-            control_renderer: ControlRenderer,
+            view: ViewWindow::new(view_window),
+            control: ControlWindow::new(control_window, gui),
             params_consumer,
             current_params: VisualParams::default(),
             _feedback_sender: feedback_sender,
@@ -94,11 +117,11 @@ impl Display {
     }
 
     pub fn view_window_id(&self) -> WindowId {
-        self.view.window.id()
+        self.view.window.window.id()
     }
 
     pub fn control_window_id(&self) -> WindowId {
-        self.control.window.window.id()
+        self.control.window_id()
     }
 
     /// Drains the params consumer, keeping only the latest value.
@@ -125,16 +148,19 @@ impl Display {
                 if is_view {
                     self.view.resize(&self.gpu.device, *new_size);
                 } else if is_control {
-                    self.control.window.resize(&self.gpu.device, *new_size);
+                    self.control.resize(&self.gpu.device, *new_size);
                 }
             }
 
             WindowEvent::RedrawRequested => {
                 if is_view {
-                    self.view_renderer
-                        .render(&self.gpu, &self.view, &self.current_params)?;
+                    self.view.render(&self.gpu, &self.current_params)?;
                 } else if is_control {
-                    self.control_renderer.render(&self.gpu, &mut self.control)?;
+                    self.control.render(&self.gpu, |ctx| {
+                        CentralPanel::default().show(ctx, |ui| {
+                            ui.heading("Hello, World!");
+                        });
+                    })?;
                 }
             }
 

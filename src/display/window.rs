@@ -4,12 +4,7 @@ use thiserror::Error;
 use wgpu::{
     Adapter, CreateSurfaceError, Device, Instance, Surface, SurfaceConfiguration, TextureFormat,
 };
-use winit::{
-    dpi::PhysicalSize, error::OsError, event::WindowEvent, event_loop::ActiveEventLoop,
-    window::Window,
-};
-
-use super::GuiContext;
+use winit::{dpi::PhysicalSize, error::OsError, event_loop::ActiveEventLoop, window::Window};
 
 /// Window and surface before GPU configuration.
 pub struct UnconfiguredWindow {
@@ -22,7 +17,7 @@ impl UnconfiguredWindow {
         event_loop: &ActiveEventLoop,
         instance: &Instance,
         title: &str,
-    ) -> Result<Self, WindowContextError> {
+    ) -> Result<Self, WindowError> {
         let attr = Window::default_attributes().with_title(title);
         let window = Arc::new(event_loop.create_window(attr)?);
         let surface = instance.create_surface(window.clone())?;
@@ -46,7 +41,7 @@ pub struct WindowContext {
 }
 
 #[derive(Error, Debug)]
-pub enum WindowContextError {
+pub enum WindowError {
     #[error("can't create winit::Window: {0}")]
     CreateWindow(#[from] OsError),
 
@@ -55,7 +50,7 @@ pub enum WindowContextError {
 }
 
 impl WindowContext {
-    fn from_raw(
+    pub(super) fn from_raw(
         window: Arc<Window>,
         surface: Surface<'static>,
         adapter: &Adapter,
@@ -97,16 +92,5 @@ impl WindowContext {
             self.config.height = size.height;
             self.surface.configure(device, &self.config);
         }
-    }
-}
-
-pub struct ControlWindow {
-    pub window: WindowContext,
-    pub gui: GuiContext,
-}
-
-impl ControlWindow {
-    pub fn handle_event(&mut self, event: &WindowEvent) -> bool {
-        self.gui.handle_event(&self.window.window, event)
     }
 }

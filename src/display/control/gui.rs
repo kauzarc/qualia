@@ -5,7 +5,7 @@ use wgpu::{Device, Queue, TextureFormat};
 use winit::event::WindowEvent;
 use winit::window::Window;
 
-use super::PreparedFrame;
+use super::frame::PreparedFrame;
 
 /// State required to render the GUI.
 pub struct GuiContext {

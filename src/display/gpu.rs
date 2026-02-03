@@ -1,6 +1,11 @@
 use pollster::FutureExt;
 use thiserror::Error;
-use wgpu::{Adapter, Device, Instance, Queue, RequestAdapterError, RequestDeviceError, Surface};
+use wgpu::{
+    Adapter, CommandEncoderDescriptor, Device, Instance, Queue, RequestAdapterError,
+    RequestDeviceError, Surface, SurfaceError, TextureView, TextureViewDescriptor,
+};
+
+use super::window::WindowContext;
 
 /// Shared GPU resources.
 pub struct GpuContext {
@@ -16,6 +21,12 @@ pub enum GpuContextError {
 
     #[error("wgpu::Device request failed: {0}")]
     RequestDevice(#[from] RequestDeviceError),
+}
+
+#[derive(Debug, Error)]
+pub enum RenderError {
+    #[error("Failed to request next texture: {0}")]
+    GetFrame(#[from] SurfaceError),
 }
 
 impl GpuContext {
@@ -46,5 +57,24 @@ impl GpuContext {
             device,
             queue,
         })
+    }
+
+    /// Acquires a frame, runs the render function, and presents.
+    pub fn render_frame<F>(&self, target: &WindowContext, f: F) -> Result<(), RenderError>
+    where
+        F: FnOnce(&mut wgpu::CommandEncoder, &TextureView),
+    {
+        let frame = target.surface.get_current_texture()?;
+        let view = frame.texture.create_view(&TextureViewDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor::default());
+
+        f(&mut encoder, &view);
+
+        self.queue.submit(Some(encoder.finish()));
+        frame.present();
+        target.window.request_redraw();
+        Ok(())
     }
 }

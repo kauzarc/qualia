@@ -108,7 +108,7 @@ impl Session {
             }
 
             SessionEvent::App(AppEvent::VisualParamsProduced) => {
-                self.display.drain_params();
+                self.display.update_visual_params();
             }
         }
         Ok(None)

@@ -9,21 +9,17 @@ mod window;
 
 use std::sync::mpsc::Sender;
 
-use egui::CentralPanel;
 use rtrb::Consumer;
 use thiserror::Error;
 use tracing::debug;
-use wgpu::{
-    CommandEncoder, CommandEncoderDescriptor, Instance, InstanceDescriptor, SurfaceError,
-    TextureView, TextureViewDescriptor,
-};
+use wgpu::{Instance, InstanceDescriptor};
 use winit::{event::WindowEvent, event_loop::ActiveEventLoop, window::WindowId};
 
 use control::{ControlWindow, GuiContext};
 pub use gpu::GpuContext;
-use gpu::GpuContextError;
+use gpu::{GpuContextError, RenderError};
 use view::ViewWindow;
-use window::{UnconfiguredWindow, WindowContext, WindowError};
+use window::{UnconfiguredWindow, WindowError};
 
 use crate::inference::VisualParams;
 use crate::trainer::Feedback;
@@ -52,31 +48,6 @@ pub enum DisplayError {
 
     #[error("Error while rendering: {0}")]
     Render(#[from] RenderError),
-}
-
-#[derive(Debug, Error)]
-pub enum RenderError {
-    #[error("Failed to request next texture: {0}")]
-    GetFrame(#[from] SurfaceError),
-}
-
-/// Acquires a frame, runs the render function, and presents.
-fn render_frame<F>(gpu: &GpuContext, target: &WindowContext, f: F) -> Result<(), RenderError>
-where
-    F: FnOnce(&mut CommandEncoder, &TextureView),
-{
-    let frame = target.surface.get_current_texture()?;
-    let view = frame.texture.create_view(&TextureViewDescriptor::default());
-    let mut encoder = gpu
-        .device
-        .create_command_encoder(&CommandEncoderDescriptor::default());
-
-    f(&mut encoder, &view);
-
-    gpu.queue.submit(Some(encoder.finish()));
-    frame.present();
-    target.window.request_redraw();
-    Ok(())
 }
 
 impl Display {
@@ -124,8 +95,8 @@ impl Display {
         self.control.window_id()
     }
 
-    /// Drains the params consumer, keeping only the latest value.
-    pub fn drain_params(&mut self) {
+    /// Updates visual params by consuming all available values, keeping only the latest.
+    pub fn update_visual_params(&mut self) {
         while let Ok(params) = self.params_consumer.pop() {
             self.current_params = params;
         }
@@ -143,12 +114,12 @@ impl Display {
             return Ok(true);
         }
 
-        match event {
+        match *event {
             WindowEvent::Resized(new_size) => {
                 if is_view {
-                    self.view.resize(&self.gpu.device, *new_size);
+                    self.view.resize(&self.gpu.device, new_size);
                 } else if is_control {
-                    self.control.resize(&self.gpu.device, *new_size);
+                    self.control.resize(&self.gpu.device, new_size);
                 }
             }
 
@@ -156,11 +127,7 @@ impl Display {
                 if is_view {
                     self.view.render(&self.gpu, &self.current_params)?;
                 } else if is_control {
-                    self.control.render(&self.gpu, |ctx| {
-                        CentralPanel::default().show(ctx, |ui| {
-                            ui.heading("Hello, World!");
-                        });
-                    })?;
+                    self.control.render(&self.gpu)?;
                 }
             }
 

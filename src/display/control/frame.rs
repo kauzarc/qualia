@@ -1,6 +1,9 @@
 use egui::{ClippedPrimitive, TextureId, TexturesDelta};
 use egui_wgpu::Renderer;
-use wgpu::{Device, Queue};
+use wgpu::{
+    Color, Device, LoadOp, Operations, Queue, RenderPassColorAttachment, RenderPassDescriptor,
+    StoreOp, TextureView,
+};
 
 /// A prepared egui frame ready for rendering.
 ///
@@ -31,6 +34,50 @@ impl<'a> PreparedFrame<'a> {
             pixels_per_point,
             textures_to_free: textures_delta.free,
         }
+    }
+
+    pub fn render(
+        self,
+        device: &Device,
+        queue: &Queue,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &TextureView,
+        size: [u32; 2],
+    ) {
+        let screen_descriptor = egui_wgpu::ScreenDescriptor {
+            size_in_pixels: size,
+            pixels_per_point: self.pixels_per_point,
+        };
+
+        self.renderer
+            .update_buffers(device, queue, encoder, &self.tris, &screen_descriptor);
+
+        let mut render_pass = Self::begin_render_pass(encoder, view);
+        self.renderer
+            .render(&mut render_pass, &self.tris, &screen_descriptor);
+    }
+
+    fn begin_render_pass(
+        encoder: &mut wgpu::CommandEncoder,
+        view: &TextureView,
+    ) -> wgpu::RenderPass<'static> {
+        encoder
+            .begin_render_pass(&RenderPassDescriptor {
+                label: Some("egui render pass"),
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view,
+                    resolve_target: None,
+                    ops: Operations {
+                        load: LoadOp::Clear(Color::BLACK),
+                        store: StoreOp::Store,
+                    },
+                    depth_slice: None,
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            })
+            .forget_lifetime()
     }
 }
 

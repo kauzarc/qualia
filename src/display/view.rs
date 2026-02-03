@@ -3,9 +3,8 @@ use wgpu::{
 };
 use winit::dpi::PhysicalSize;
 
-use super::gpu::GpuContext;
+use super::gpu::{GpuContext, RenderError};
 use super::window::WindowContext;
-use super::{RenderError, render_frame};
 use crate::inference::VisualParams;
 
 /// View window for visual output.
@@ -27,7 +26,7 @@ impl ViewWindow {
         let g = params.actions[1].get();
         let b = params.actions[2].get();
 
-        render_frame(gpu, &self.window, |encoder, view| {
+        gpu.render_frame(&self.window, |encoder, view| {
             encoder.begin_render_pass(&RenderPassDescriptor {
                 label: Some("View Clear"),
                 color_attachments: &[Some(RenderPassColorAttachment {

@@ -27,6 +27,8 @@ use session::{Session, SessionAction, SessionEvent};
 pub enum AppEvent {
     /// Inference produced new visual params.
     VisualParamsProduced,
+    /// Control panel requests feedback be sent to trainer.
+    FeedbackRequested,
 }
 
 /// Main application entry point implementing the winit event loop handler.

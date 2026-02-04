@@ -8,12 +8,15 @@ mod view;
 mod window;
 
 use std::sync::mpsc::Sender;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use rtrb::Consumer;
 use thiserror::Error;
 use tracing::debug;
 use wgpu::{Instance, InstanceDescriptor};
-use winit::{event::WindowEvent, event_loop::ActiveEventLoop, window::WindowId};
+use winit::event::WindowEvent;
+use winit::event_loop::{ActiveEventLoop, EventLoopProxy};
+use winit::window::WindowId;
 
 use control::{ControlWindow, GuiContext};
 pub use gpu::GpuContext;
@@ -21,8 +24,9 @@ use gpu::{GpuContextError, RenderError};
 use view::ViewWindow;
 use window::{UnconfiguredWindow, WindowError};
 
+use crate::AppEvent;
 use crate::inference::VisualParams;
-use crate::trainer::Feedback;
+use crate::trainer::{Feedback, Reward};
 
 /// Display subsystem managing windows and GPU rendering.
 pub struct Display {
@@ -31,7 +35,7 @@ pub struct Display {
     control: ControlWindow,
     params_consumer: Consumer<VisualParams>,
     current_params: VisualParams,
-    _feedback_sender: Sender<Feedback>,
+    feedback_sender: Sender<Feedback>,
 }
 
 /// Errors that can occur during display operations.
@@ -48,6 +52,9 @@ pub enum DisplayError {
 
     #[error("Error while rendering: {0}")]
     Render(#[from] RenderError),
+
+    #[error("Trainer disconnected")]
+    TrainerDisconnected,
 }
 
 impl Display {
@@ -55,6 +62,7 @@ impl Display {
         event_loop: &ActiveEventLoop,
         params_consumer: Consumer<VisualParams>,
         feedback_sender: Sender<Feedback>,
+        proxy: EventLoopProxy<AppEvent>,
     ) -> Result<Self, DisplayError> {
         let instance = Instance::new(&InstanceDescriptor::default());
 
@@ -80,10 +88,10 @@ impl Display {
         Ok(Self {
             gpu,
             view: ViewWindow::new(view_window),
-            control: ControlWindow::new(control_window, gui),
+            control: ControlWindow::new(control_window, gui, proxy),
             params_consumer,
             current_params: VisualParams::default(),
-            _feedback_sender: feedback_sender,
+            feedback_sender,
         })
     }
 
@@ -100,6 +108,20 @@ impl Display {
         while let Ok(params) = self.params_consumer.pop() {
             self.current_params = params;
         }
+    }
+
+    /// Sends feedback to the trainer.
+    pub fn send_feedback(&self) -> Result<(), DisplayError> {
+        let feedback = Feedback {
+            reward: Reward::new(0.0).expect("0.0 is valid"),
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+                .unwrap_or(0),
+        };
+        self.feedback_sender
+            .send(feedback)
+            .map_err(|_| DisplayError::TrainerDisconnected)
     }
 
     pub fn handle_event(

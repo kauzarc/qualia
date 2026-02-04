@@ -6,8 +6,9 @@
 use std::io;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 use thiserror::Error;
 use tracing::{error, info};
@@ -59,7 +60,7 @@ pub struct Trainer {
 
 impl Trainer {
     /// Creates and starts the trainer thread.
-    pub fn try_new(_feedback_receiver: Receiver<Feedback>) -> Result<Self, TrainerError> {
+    pub fn try_new(feedback_receiver: Receiver<Feedback>) -> Result<Self, TrainerError> {
         let stop_flag = Arc::new(AtomicBool::new(false));
 
         let handle = {
@@ -70,8 +71,16 @@ impl Trainer {
                     info!("Trainer thread started");
 
                     while !stop_flag.load(Ordering::Relaxed) {
-                        // TODO: receive feedback, update replay buffer, train model
-                        thread::sleep(std::time::Duration::from_millis(100));
+                        match feedback_receiver.recv_timeout(Duration::from_millis(100)) {
+                            Ok(feedback) => {
+                                info!("Received feedback: {:?}", feedback);
+                            }
+                            Err(RecvTimeoutError::Timeout) => {}
+                            Err(RecvTimeoutError::Disconnected) => {
+                                info!("Feedback channel disconnected");
+                                break;
+                            }
+                        }
                     }
 
                     info!("Trainer thread stopped");

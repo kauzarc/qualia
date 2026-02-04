@@ -74,13 +74,17 @@ impl Session {
 
         let audio_driver = AudioDriver::try_new(channels.samples_producer)?;
         let dsp_engine = DspEngine::try_new(channels.samples_consumer, channels.state_producer)?;
-        let inference =
-            Inference::try_new(channels.state_consumer, channels.params_producer, proxy)?;
+        let inference = Inference::try_new(
+            channels.state_consumer,
+            channels.params_producer,
+            proxy.clone(),
+        )?;
         let trainer = Trainer::try_new(channels.feedback_receiver)?;
         let display = Display::try_new(
             event_loop,
             channels.params_consumer,
             channels.feedback_sender,
+            proxy,
         )?;
 
         Ok(Self {
@@ -109,6 +113,10 @@ impl Session {
 
             SessionEvent::App(AppEvent::VisualParamsProduced) => {
                 self.display.update_visual_params();
+            }
+
+            SessionEvent::App(AppEvent::FeedbackRequested) => {
+                self.display.send_feedback()?;
             }
         }
         Ok(None)

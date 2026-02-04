@@ -5,8 +5,10 @@ mod panel;
 pub use gui::GuiContext;
 
 use panel::ControlPanel;
-
 use wgpu::Device;
+use winit::event_loop::EventLoopProxy;
+
+use crate::AppEvent;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
 use winit::window::WindowId;
@@ -22,11 +24,11 @@ pub struct ControlWindow {
 }
 
 impl ControlWindow {
-    pub fn new(window: WindowContext, gui: GuiContext) -> Self {
+    pub fn new(window: WindowContext, gui: GuiContext, proxy: EventLoopProxy<AppEvent>) -> Self {
         Self {
             window,
             gui,
-            panel: ControlPanel::new(),
+            panel: ControlPanel::new(proxy),
         }
     }
 
@@ -46,7 +48,7 @@ impl ControlWindow {
         let frame = self
             .gui
             .prepare_frame(&self.window.window, &gpu.device, &gpu.queue, |ctx| {
-                self.panel.show(ctx)
+                self.panel.show(ctx);
             });
         let size = [self.window.config.width, self.window.config.height];
 

@@ -15,11 +15,11 @@ use tracing::{error, info};
 
 /// User feedback value in [-1.0, 1.0].
 #[derive(Clone, Copy, Debug)]
-pub struct Reward(f32);
+pub struct Reward(f64);
 
 impl Reward {
     /// Creates a new `Reward` if value is in [-1.0, 1.0].
-    pub fn new(value: f32) -> Option<Self> {
+    pub fn new(value: f64) -> Option<Self> {
         if (-1.0..=1.0).contains(&value) {
             Some(Self(value))
         } else {
@@ -29,7 +29,7 @@ impl Reward {
 
     /// Returns the inner value.
     #[expect(dead_code, reason = "will be used by trainer")]
-    pub fn get(self) -> f32 {
+    pub fn get(self) -> f64 {
         self.0
     }
 }

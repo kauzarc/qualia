@@ -14,11 +14,9 @@ use thiserror::Error;
 use tracing::{error, info};
 
 /// User feedback value in [-1.0, 1.0].
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub struct Reward(f32);
 
-#[allow(dead_code)]
 impl Reward {
     /// Creates a new `Reward` if value is in [-1.0, 1.0].
     pub fn new(value: f32) -> Option<Self> {
@@ -30,13 +28,14 @@ impl Reward {
     }
 
     /// Returns the inner value.
+    #[expect(dead_code, reason = "will be used by trainer")]
     pub fn get(self) -> f32 {
         self.0
     }
 }
 
 /// User feedback event sent from `Display` to `Trainer`.
-#[allow(dead_code)]
+#[expect(dead_code, reason = "fields will be used by trainer")]
 #[derive(Clone, Copy, Debug)]
 pub struct Feedback {
     pub reward: Reward,

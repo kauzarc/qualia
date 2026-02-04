@@ -48,9 +48,9 @@ impl Processor for DspProcessor {
     }
 }
 
-#[allow(clippy::unused_self)]
+#[expect(clippy::unused_self, reason = "will use self for stateful processing")]
 impl DspProcessor {
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss, reason = "MEL_BANDS fits in f64 mantissa")]
     fn compute_energy(&self, samples: &AudioSamples) -> f64 {
         let sum_squares: f64 = samples.iter().map(|s| s * s).sum();
         (sum_squares / HOP_SIZE as f64).sqrt()

@@ -15,7 +15,7 @@ pub struct GuiContext {
 }
 
 impl GuiContext {
-    #[allow(clippy::cast_possible_truncation)]
+    #[expect(clippy::cast_possible_truncation, reason = "scale factor fits in f32")]
     pub fn new(window: &Window, device: &Device, output_format: TextureFormat) -> Self {
         let context = Context::default();
 

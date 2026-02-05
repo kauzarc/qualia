@@ -6,7 +6,7 @@ use winit::dpi::PhysicalSize;
 
 use super::gpu::{GpuContext, RenderError};
 use super::window::{UnconfiguredWindow, WindowContext};
-use crate::inference::VisualParams;
+use crate::inference::ControlVoltage;
 
 /// View window for visual output.
 pub struct ViewWindow {
@@ -24,10 +24,10 @@ impl ViewWindow {
         self.window.resize(device, size);
     }
 
-    pub fn render(&self, gpu: &GpuContext, params: &VisualParams) -> Result<(), RenderError> {
-        let r = params.actions[0].get();
-        let g = params.actions[1].get();
-        let b = params.actions[2].get();
+    pub fn render(&self, gpu: &GpuContext, actions: &[ControlVoltage]) -> Result<(), RenderError> {
+        let r = actions.first().copied().map_or(0.0, ControlVoltage::get);
+        let g = actions.get(1).copied().map_or(0.0, ControlVoltage::get);
+        let b = actions.get(2).copied().map_or(0.0, ControlVoltage::get);
 
         gpu.render_frame(&self.window, |encoder, view| {
             encoder.begin_render_pass(&RenderPassDescriptor {

@@ -25,7 +25,7 @@ use view::ViewWindow;
 use window::{UnconfiguredWindow, WindowError};
 
 use crate::AppEvent;
-use crate::inference::VisualParams;
+use crate::inference::{ControlVoltage, VisualParams};
 use crate::trainer::{Feedback, Reward};
 
 /// Display subsystem managing windows and GPU rendering.
@@ -34,7 +34,8 @@ pub struct Display {
     view: ViewWindow,
     control: ControlWindow,
     params_consumer: Consumer<VisualParams>,
-    current_params: VisualParams,
+    /// Two most recent params for interpolation: [0] = older, [1] = newer.
+    params: [VisualParams; 2],
     feedback_sender: Sender<Feedback>,
 }
 
@@ -85,7 +86,7 @@ impl Display {
             view,
             control,
             params_consumer,
-            current_params: VisualParams::default(),
+            params: [VisualParams::default(); 2],
             feedback_sender,
         })
     }
@@ -98,11 +99,48 @@ impl Display {
         self.control.window_id()
     }
 
-    /// Updates visual params by consuming all available values, keeping only the latest.
+    /// Assumed display latency in milliseconds.
+    const DISPLAY_DELAY_MS: u64 = 16;
+
+    /// Updates visual params by consuming all available values, shifting older ← newer.
     pub fn update_visual_params(&mut self) {
         while let Ok(params) = self.params_consumer.pop() {
-            self.current_params = params;
+            self.params[0] = self.params[1];
+            self.params[1] = params;
         }
+    }
+
+    /// Computes interpolated control voltages based on timestamps and display delay.
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "interpolation factor t only needs rough precision"
+    )]
+    fn interpolated_actions(&self) -> Box<[ControlVoltage]> {
+        let [older, newer] = &self.params;
+        let n = newer.num_actions;
+
+        if newer.is_transient {
+            return newer.actions[..n].into();
+        }
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+
+        let render_time = now.saturating_sub(Self::DISPLAY_DELAY_MS);
+        let duration = newer.timestamp.saturating_sub(older.timestamp);
+
+        if duration == 0 || render_time >= newer.timestamp {
+            return newer.actions[..n].into();
+        }
+
+        let t = render_time.saturating_sub(older.timestamp) as f64 / duration as f64;
+
+        older.actions[..n]
+            .iter()
+            .zip(&newer.actions[..n])
+            .map(|(a, b)| ControlVoltage::clamped(a.get() + (b.get() - a.get()) * t))
+            .collect()
     }
 
     /// Sends feedback to the trainer.
@@ -142,7 +180,8 @@ impl Display {
 
             WindowEvent::RedrawRequested => {
                 if is_view {
-                    self.view.render(&self.gpu, &self.current_params)?;
+                    let actions = self.interpolated_actions();
+                    self.view.render(&self.gpu, &actions)?;
                 } else if is_control {
                     self.control.render(&self.gpu)?;
                 }

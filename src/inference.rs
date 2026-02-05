@@ -9,4 +9,4 @@ mod passthrough;
 mod processor;
 
 pub use engine::{Inference, InferenceError};
-pub use params::VisualParams;
+pub use params::{ControlVoltage, VisualParams};

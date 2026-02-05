@@ -35,9 +35,9 @@ impl InferenceModel for PassthroughModel {
 
         VisualParams {
             actions,
-            _num_actions: self.output_size,
-            _is_transient: state.is_transient,
-            _timestamp: state.timestamp,
+            num_actions: self.output_size,
+            is_transient: state.is_transient,
+            timestamp: state.timestamp,
         }
     }
 

@@ -18,7 +18,7 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, EventLoopProxy};
 use winit::window::WindowId;
 
-use control::{ControlWindow, GuiContext};
+use control::ControlWindow;
 pub use gpu::GpuContext;
 use gpu::{GpuContextError, RenderError};
 use view::ViewWindow;
@@ -67,28 +67,23 @@ impl Display {
         let instance = Instance::new(&InstanceDescriptor::default());
 
         debug!("Creating windows...");
-        let view = UnconfiguredWindow::try_new(event_loop, &instance, "Qualia Vision")
+        let view_unconfigured = UnconfiguredWindow::try_new(event_loop, &instance, "Qualia Vision")
             .map_err(DisplayError::InitViewWindow)?;
-        let control = UnconfiguredWindow::try_new(event_loop, &instance, "Qualia Control")
-            .map_err(DisplayError::InitControlWindow)?;
+        let control_unconfigured =
+            UnconfiguredWindow::try_new(event_loop, &instance, "Qualia Control")
+                .map_err(DisplayError::InitControlWindow)?;
 
         debug!("Initializing GPU...");
-        let gpu = GpuContext::try_new(&instance, view.surface())?;
+        let gpu = GpuContext::try_new(&instance, view_unconfigured.surface())?;
 
         debug!("Configuring windows...");
-        let view_window = view.configure(&gpu.adapter, &gpu.device);
-        let control_window = control.configure(&gpu.adapter, &gpu.device);
-
-        let gui = GuiContext::new(
-            &control_window.window,
-            &gpu.device,
-            control_window.config.format,
-        );
+        let view = ViewWindow::new(view_unconfigured, &gpu.adapter, &gpu.device);
+        let control = ControlWindow::new(control_unconfigured, &gpu.adapter, &gpu.device, proxy);
 
         Ok(Self {
             gpu,
-            view: ViewWindow::new(view_window),
-            control: ControlWindow::new(control_window, gui, proxy),
+            view,
+            control,
             params_consumer,
             current_params: VisualParams::default(),
             feedback_sender,

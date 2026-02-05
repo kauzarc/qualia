@@ -1,10 +1,11 @@
 use wgpu::{
-    Color, Device, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, StoreOp,
+    Adapter, Color, Device, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor,
+    StoreOp,
 };
 use winit::dpi::PhysicalSize;
 
 use super::gpu::{GpuContext, RenderError};
-use super::window::WindowContext;
+use super::window::{UnconfiguredWindow, WindowContext};
 use crate::inference::VisualParams;
 
 /// View window for visual output.
@@ -13,8 +14,10 @@ pub struct ViewWindow {
 }
 
 impl ViewWindow {
-    pub fn new(window: WindowContext) -> Self {
-        Self { window }
+    pub fn new(window: UnconfiguredWindow, adapter: &Adapter, device: &Device) -> Self {
+        Self {
+            window: window.configure(adapter, device),
+        }
     }
 
     pub fn resize(&mut self, device: &Device, size: PhysicalSize<u32>) {

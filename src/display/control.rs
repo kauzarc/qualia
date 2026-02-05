@@ -2,19 +2,18 @@ mod frame;
 mod gui;
 mod panel;
 
-pub use gui::GuiContext;
+use gui::GuiContext;
 
 use panel::ControlPanel;
-use wgpu::Device;
-use winit::event_loop::EventLoopProxy;
-
-use crate::AppEvent;
+use wgpu::{Adapter, Device};
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
+use winit::event_loop::EventLoopProxy;
 use winit::window::WindowId;
 
 use super::gpu::{GpuContext, RenderError};
-use super::window::WindowContext;
+use super::window::{UnconfiguredWindow, WindowContext};
+use crate::AppEvent;
 
 /// Control window with egui GUI.
 pub struct ControlWindow {
@@ -24,7 +23,14 @@ pub struct ControlWindow {
 }
 
 impl ControlWindow {
-    pub fn new(window: WindowContext, gui: GuiContext, proxy: EventLoopProxy<AppEvent>) -> Self {
+    pub fn new(
+        window: UnconfiguredWindow,
+        adapter: &Adapter,
+        device: &Device,
+        proxy: EventLoopProxy<AppEvent>,
+    ) -> Self {
+        let window = window.configure(adapter, device);
+        let gui = GuiContext::new(&window.window, device, window.config.format);
         Self {
             window,
             gui,

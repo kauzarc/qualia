@@ -61,6 +61,8 @@ Trainer Thread (async, low priority)
   - `gpu.rs` - `GpuContext` for device/queue management
   - `window.rs` - `WindowContext` for surface configuration
   - `view.rs` - `ViewWindow` for visual output
+  - `params.rs` - `ParamsBuffer` for visual params with interpolation
+  - `ring_pair.rs` - `RingPair<T>` fixed-size circular buffer of 2
   - `control/` - Control panel window
     - `panel.rs` - `ControlPanel` UI with feedback button
     - `gui.rs` - `GuiContext` egui state and rendering
@@ -87,7 +89,8 @@ pub const MAX_ACTIONS: usize = 64;
 
 - `ControlVoltage(f64)` - Normalized [0.0, 1.0] for shader parameters
 - `Reward(f64)` - User feedback [-1.0, 1.0]
-- `Feedback` - Contains `Reward` and timestamp, sent from Display to Trainer
+- `Feedback` - Contains `Reward` and `Instant` timestamp, sent from Display to Trainer
+- Timestamps use `std::time::Instant` for monotonic timing across threads
 
 ### Communication Patterns
 
@@ -100,6 +103,7 @@ pub const MAX_ACTIONS: usize = 64;
 
 - **`Processor` trait** - Generic transform with `Input`/`Output` associated types
 - **`Pipe<P: Processor>`** - Connects ring buffers with "drain to latest" strategy
+- **`RingPair<T>`** - Fixed-size circular buffer of 2 with O(1) push
 - **`InferenceModel` trait** - Domain-specific: `infer()`, `output_size()`, `reward()`
 
 ### Design Principles

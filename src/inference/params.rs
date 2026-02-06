@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 /// Maximum number of visual control parameters.
 pub const MAX_ACTIONS: usize = 64;
 
@@ -23,8 +25,7 @@ pub struct VisualParams {
     pub actions: [ControlVoltage; MAX_ACTIONS],
     pub num_actions: usize,
     pub is_transient: bool,
-    /// Timestamp in milliseconds since UNIX epoch.
-    pub timestamp: u64,
+    pub timestamp: Instant,
 }
 
 impl Default for VisualParams {
@@ -33,7 +34,7 @@ impl Default for VisualParams {
             actions: [ControlVoltage::default(); MAX_ACTIONS],
             num_actions: 16,
             is_transient: false,
-            timestamp: 0,
+            timestamp: Instant::now(),
         }
     }
 }

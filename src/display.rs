@@ -10,7 +10,7 @@ mod view;
 mod window;
 
 use std::sync::mpsc::Sender;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 
 use rtrb::Consumer;
 use thiserror::Error;
@@ -108,10 +108,7 @@ impl Display {
     pub fn send_feedback(&self) -> Result<(), DisplayError> {
         let feedback = Feedback {
             reward: Reward::new(0.0).expect("0.0 is valid"),
-            timestamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
-                .unwrap_or(0),
+            timestamp: Instant::now(),
         };
         self.feedback_sender
             .send(feedback)

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use thiserror::Error;
 use tracing::{error, info};
@@ -39,7 +39,7 @@ impl Reward {
 #[derive(Clone, Copy, Debug)]
 pub struct Feedback {
     pub reward: Reward,
-    pub timestamp: u64,
+    pub timestamp: Instant,
 }
 
 /// Errors that can occur when initializing `Trainer`.

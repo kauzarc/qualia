@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::audio::{AudioSamples, HOP_SIZE};
 use crate::channel::Processor;
 
@@ -9,16 +11,12 @@ const TRANSIENT_THRESHOLD: f64 = 0.1;
 
 /// Handles DSP computations: FFT, Mel spectrogram, and feature extraction.
 pub struct DspProcessor {
-    timestamp: u64,
     prev_energy: f64,
 }
 
 impl DspProcessor {
     pub fn new() -> Self {
-        Self {
-            timestamp: 0,
-            prev_energy: 0.0,
-        }
+        Self { prev_energy: 0.0 }
     }
 }
 
@@ -34,8 +32,6 @@ impl Processor for DspProcessor {
         let is_transient = self.detect_transient(energy);
 
         self.prev_energy = energy;
-        let timestamp = self.timestamp;
-        self.timestamp = self.timestamp.wrapping_add(1);
 
         AudioState {
             mel_bands,
@@ -43,7 +39,7 @@ impl Processor for DspProcessor {
             _spectral_flux: spectral_flux,
             _zero_crossing_rate: zero_crossing_rate,
             is_transient,
-            timestamp,
+            timestamp: Instant::now(),
         }
     }
 }

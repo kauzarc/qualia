@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use super::MEL_BANDS;
 
 /// Audio features extracted by `DspEngine`, consumed by `Inference`.
@@ -8,7 +10,7 @@ pub struct AudioState {
     pub _spectral_flux: f64,
     pub _zero_crossing_rate: f64,
     pub is_transient: bool,
-    pub timestamp: u64,
+    pub timestamp: Instant,
 }
 
 impl Default for AudioState {
@@ -19,7 +21,7 @@ impl Default for AudioState {
             _spectral_flux: 0.0,
             _zero_crossing_rate: 0.0,
             is_transient: false,
-            timestamp: 0,
+            timestamp: Instant::now(),
         }
     }
 }

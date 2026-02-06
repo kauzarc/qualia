@@ -42,18 +42,18 @@ Trainer Thread (async, low priority)
 
 - `session.rs` - Orchestrates all threads
 - `channel/` - Pipeline communication infrastructure
-  - `pipe.rs` - `Processor` trait and `Pipe<P>` for "drain to latest" buffer strategy
   - `channels.rs` - `Channels` struct creates all ring buffers
 - `audio/` - Hard real-time audio capture (cpal)
   - `driver.rs` - `AudioDriver` with `HopAccumulator`
 - `dsp/` - Digital signal processing
   - `engine.rs` - `DspEngine` thread management
-  - `processor.rs` - `DspProcessor` implements `Processor`
+  - `pipe.rs` - `DspPipe` with `TickResult` for IO
+  - `processor.rs` - `DspProcessor` feature extraction
   - `state.rs` - `AudioState` (67 floats)
 - `inference/` - Neural network inference
   - `engine.rs` - `Inference` thread management
   - `model.rs` - `InferenceModel` trait (infer, output_size, reward)
-  - `processor.rs` - `InferenceProcessor` wraps model for `Pipe`
+  - `pipe.rs` - `InferencePipe` with `TickResult` for IO
   - `passthrough.rs` - `PassthroughModel` (MVP placeholder)
   - `params.rs` - `VisualParams`, `ControlVoltage`
 - `trainer.rs` - Online learning with replay buffer (skeleton)
@@ -101,8 +101,8 @@ pub const MAX_ACTIONS: usize = 64;
 
 ### Key Abstractions
 
-- **`Processor` trait** - Generic transform with `Input`/`Output` associated types
-- **`Pipe<P: Processor>`** - Connects ring buffers with "drain to latest" strategy
+- **`DspPipe` / `InferencePipe`** - Module-local IO with "drain to latest" strategy
+- **`TickResult`** - Enum for pipe tick outcomes (Produced, NoInput, BufferFull)
 - **`RingPair<T>`** - Fixed-size circular buffer of 2 with O(1) push
 - **`InferenceModel` trait** - Domain-specific: `infer()`, `output_size()`, `reward()`
 

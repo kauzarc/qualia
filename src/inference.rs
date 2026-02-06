@@ -6,7 +6,7 @@ mod engine;
 mod model;
 mod params;
 mod passthrough;
-mod processor;
+mod pipe;
 
 pub use engine::{Inference, InferenceError};
 pub use params::{ControlVoltage, VisualParams};

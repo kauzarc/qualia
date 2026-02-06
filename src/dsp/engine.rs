@@ -8,8 +8,8 @@ use thiserror::Error;
 use tracing::{error, info, warn};
 
 use crate::audio::AudioSamples;
-use crate::channel::Pipe;
 
+use super::pipe::{DspPipe, TickResult};
 use super::processor::DspProcessor;
 use super::state::AudioState;
 
@@ -58,13 +58,13 @@ impl DspEngine {
         move || {
             info!("DSP engine thread started");
 
-            let mut pipe = Pipe::new(DspProcessor::new(), samples_consumer, state_producer);
+            let mut pipe = DspPipe::new(DspProcessor::new(), samples_consumer, state_producer);
 
             while !stop_flag.load(Ordering::Relaxed) {
                 match pipe.tick() {
-                    Ok(true) => {}
-                    Ok(false) => thread::sleep(std::time::Duration::from_millis(1)),
-                    Err(_) => warn!("AudioState buffer full, dropping frame"),
+                    TickResult::Produced => {}
+                    TickResult::NoInput => thread::sleep(std::time::Duration::from_millis(1)),
+                    TickResult::BufferFull => warn!("AudioState buffer full, dropping frame"),
                 }
             }
 

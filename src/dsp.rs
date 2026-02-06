@@ -4,6 +4,7 @@
 //! spectral flux, zero-crossing rate, and transient detection.
 
 mod engine;
+mod pipe;
 mod processor;
 mod state;
 

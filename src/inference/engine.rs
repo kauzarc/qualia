@@ -9,12 +9,11 @@ use tracing::{error, info, warn};
 use winit::event_loop::EventLoopProxy;
 
 use crate::AppEvent;
-use crate::channel::Pipe;
 use crate::dsp::AudioState;
 
 use super::params::VisualParams;
 use super::passthrough::PassthroughModel;
-use super::processor::InferenceProcessor;
+use super::pipe::{InferencePipe, TickResult};
 
 /// Errors that can occur when initializing `Inference`.
 #[derive(Debug, Error)]
@@ -63,19 +62,18 @@ impl Inference {
             info!("Inference thread started");
 
             let model = PassthroughModel::new(16);
-            let processor = InferenceProcessor::new(model);
-            let mut pipe = Pipe::new(processor, state_consumer, params_producer);
+            let mut pipe = InferencePipe::new(model, state_consumer, params_producer);
 
             while !stop_flag.load(Ordering::Relaxed) {
                 match pipe.tick() {
-                    Ok(true) => {
+                    TickResult::Produced => {
                         if proxy.send_event(AppEvent::VisualParamsProduced).is_err() {
                             error!("Event loop closed, stopping inference");
                             break;
                         }
                     }
-                    Ok(false) => thread::sleep(std::time::Duration::from_millis(1)),
-                    Err(_) => warn!("VisualParams buffer full, dropping frame"),
+                    TickResult::NoInput => thread::sleep(std::time::Duration::from_millis(1)),
+                    TickResult::BufferFull => warn!("VisualParams buffer full, dropping frame"),
                 }
             }
 

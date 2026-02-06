@@ -1,7 +1,6 @@
 use std::time::Instant;
 
 use crate::audio::{AudioSamples, HOP_SIZE};
-use crate::channel::Processor;
 
 use super::MEL_BANDS;
 use super::state::AudioState;
@@ -18,17 +17,12 @@ impl DspProcessor {
     pub fn new() -> Self {
         Self { prev_energy: 0.0 }
     }
-}
 
-impl Processor for DspProcessor {
-    type Input = AudioSamples;
-    type Output = AudioState;
-
-    fn process(&mut self, samples: AudioSamples) -> AudioState {
-        let energy = self.compute_energy(&samples);
-        let mel_bands = self.compute_mel_bands(&samples);
-        let spectral_flux = self.compute_spectral_flux(&samples);
-        let zero_crossing_rate = self.compute_zero_crossing_rate(&samples);
+    pub fn process(&mut self, samples: &AudioSamples) -> AudioState {
+        let energy = self.compute_energy(samples);
+        let mel_bands = self.compute_mel_bands(samples);
+        let spectral_flux = self.compute_spectral_flux(samples);
+        let zero_crossing_rate = self.compute_zero_crossing_rate(samples);
         let is_transient = self.detect_transient(energy);
 
         self.prev_energy = energy;

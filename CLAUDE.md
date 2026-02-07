@@ -46,9 +46,10 @@ Trainer Thread (async, low priority)
 - `audio/` - Hard real-time audio capture (cpal)
   - `driver.rs` - `AudioDriver` with `HopAccumulator`
 - `dsp/` - Digital signal processing
-  - `engine.rs` - `DspEngine` thread management
-  - `pipe.rs` - `DspPipe` with `TickResult` for IO
-  - `processor.rs` - `DspProcessor` feature extraction
+  - `thread.rs` - `DspThread` thread spawn and join
+  - `orchestrator.rs` - `DspOrchestrator` core loop, coordinates IO and processing
+  - `input.rs` - `AudioInput` receives and holds audio samples
+  - `processor.rs` - `DspProcessor` stateful feature extraction
   - `state.rs` - `AudioState` (67 floats)
 - `inference/` - Neural network inference
   - `engine.rs` - `Inference` thread management
@@ -101,8 +102,10 @@ pub const MAX_ACTIONS: usize = 64;
 
 ### Key Abstractions
 
-- **`DspPipe` / `InferencePipe`** - Module-local IO with "drain to latest" strategy
-- **`TickResult`** - Enum for pipe tick outcomes (Produced, NoInput, BufferFull)
+- **`AudioInput`** - Owns audio samples, drains to latest from ring buffer
+- **`DspOrchestrator`** - Coordinates input, processing, and output in core loop
+- **`InferencePipe`** - Module-local IO with "drain to latest" strategy
+- **`TickResult`** - Enum for inference pipe tick outcomes (Produced, NoInput, BufferFull)
 - **`RingPair<T>`** - Fixed-size circular buffer of 2 with O(1) push
 - **`InferenceModel` trait** - Domain-specific: `infer()`, `output_size()`, `reward()`
 

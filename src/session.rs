@@ -14,7 +14,7 @@ use crate::{
     audio::{AudioDriver, AudioDriverError},
     channel::Channels,
     display::{Display, DisplayError},
-    dsp::{DspEngine, DspEngineError},
+    dsp::{DspThread, DspThreadError},
     inference::{Inference, InferenceError},
     trainer::{Trainer, TrainerError},
 };
@@ -22,7 +22,7 @@ use crate::{
 /// Active session holding all threads and the display.
 pub struct Session {
     _audio_driver: AudioDriver,
-    _dsp_engine: DspEngine,
+    _dsp_thread: DspThread,
     _inference: Inference,
     _trainer: Trainer,
     display: Display,
@@ -51,8 +51,8 @@ pub enum SessionInitError {
     #[error("Failed to init audio driver: {0}")]
     AudioDriver(#[from] AudioDriverError),
 
-    #[error("Failed to init DSP engine: {0}")]
-    DspEngine(#[from] DspEngineError),
+    #[error("Failed to init DSP thread: {0}")]
+    DspThread(#[from] DspThreadError),
 
     #[error("Failed to init inference: {0}")]
     Inference(#[from] InferenceError),
@@ -73,7 +73,7 @@ impl Session {
         let channels = Channels::new();
 
         let audio_driver = AudioDriver::try_new(channels.samples_producer)?;
-        let dsp_engine = DspEngine::try_new(channels.samples_consumer, channels.state_producer)?;
+        let dsp_thread = DspThread::try_new(channels.samples_consumer, channels.state_producer)?;
         let inference = Inference::try_new(
             channels.state_consumer,
             channels.params_producer,
@@ -89,7 +89,7 @@ impl Session {
 
         Ok(Self {
             _audio_driver: audio_driver,
-            _dsp_engine: dsp_engine,
+            _dsp_thread: dsp_thread,
             _inference: inference,
             _trainer: trainer,
             display,

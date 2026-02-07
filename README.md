@@ -22,7 +22,7 @@ Asynchronous multi-threaded architecture separating temporal domains to guarante
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  DSP Thread (~90 Hz)                                                    │
 │  ┌─────────────┐                                                        │
-│  │  DspEngine  │  FFT, Mel spectrogram, energy, transient detection     │
+│  │  DspThread  │  FFT, Mel spectrogram, energy, transient detection     │
 │  └──────┬──────┘                                                        │
 │         │ AudioState [67 floats] (rtrb)                                 │
 └─────────┼───────────────────────────────────────────────────────────────┘
@@ -61,7 +61,7 @@ Asynchronous multi-threaded architecture separating temporal domains to guarante
 | Module | Thread | Communication | Status |
 |--------|--------|---------------|--------|
 | **AudioDriver** | Audio | `rtrb` → DSP | Basic infrastructure |
-| **DspEngine** | DSP | `rtrb` → Inference | Basic infrastructure |
+| **DspThread** | DSP | `rtrb` → Inference | Basic infrastructure |
 | **Inference** | Inference | `rtrb` → Main | Basic infrastructure |
 | **Display** | Main | renders VisualParams, sends Feedback | Basic infrastructure |
 | **Trainer** | Trainer | `mpsc` ← Main | Basic infrastructure |

@@ -7,8 +7,6 @@ use rtrb::{Consumer, Producer};
 use thiserror::Error;
 use tracing::error;
 
-use crate::audio::AudioSamples;
-
 use super::orchestrator::DspOrchestrator;
 use super::state::AudioState;
 
@@ -28,7 +26,7 @@ pub struct DspThread {
 impl DspThread {
     /// Creates and starts the DSP thread.
     pub fn try_new(
-        samples_consumer: Consumer<AudioSamples>,
+        samples_consumer: Consumer<f64>,
         state_producer: Producer<AudioState>,
     ) -> Result<Self, DspThreadError> {
         let stop_flag = Arc::new(AtomicBool::new(false));

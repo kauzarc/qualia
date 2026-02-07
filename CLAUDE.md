@@ -22,7 +22,7 @@ Qualia is a real-time visual generation engine for VJing that uses online learni
 
 ```
 Audio Thread (hard real-time, cpal)
-    │ raw samples [f64; 512] via rtrb
+    │ raw f64 samples via rtrb
     ▼
 DSP Thread (~90 Hz)
     │ AudioState [67 floats] via rtrb
@@ -44,11 +44,11 @@ Trainer Thread (async, low priority)
 - `channel/` - Pipeline communication infrastructure
   - `channels.rs` - `Channels` struct creates all ring buffers
 - `audio/` - Hard real-time audio capture (cpal)
-  - `driver.rs` - `AudioDriver` with `HopAccumulator`
+  - `driver.rs` - `AudioDriver` bulk-writes raw f64 samples
 - `dsp/` - Digital signal processing
   - `thread.rs` - `DspThread` thread spawn and join
   - `orchestrator.rs` - `DspOrchestrator` core loop, coordinates IO and processing
-  - `input.rs` - `AudioInput` receives and holds audio samples
+  - `input.rs` - `AudioInput` accumulates raw samples into `HOP_SIZE` frames
   - `processor.rs` - `DspProcessor` stateful feature extraction
   - `state.rs` - `AudioState` (67 floats)
 - `inference/` - Neural network inference
@@ -76,10 +76,8 @@ Trainer Thread (async, low priority)
 const DSP_RATE_HZ: usize = 90;
 const INFERENCE_RATE_HZ: usize = 60;
 
-// audio.rs
-pub const HOP_SIZE: usize = 512;  // ~10.7ms at 48kHz
-
 // dsp.rs
+pub const HOP_SIZE: usize = 512;  // ~10.7ms at 48kHz
 pub const MEL_BANDS: usize = 64;
 
 // inference/params.rs
@@ -102,7 +100,7 @@ pub const MAX_ACTIONS: usize = 64;
 
 ### Key Abstractions
 
-- **`AudioInput`** - Owns audio samples, drains to latest from ring buffer
+- **`AudioInput`** - Accumulates raw f64 samples into `HOP_SIZE` frames, exposes latest complete frame
 - **`DspOrchestrator`** - Coordinates input, processing, and output in core loop
 - **`InferencePipe`** - Module-local IO with "drain to latest" strategy
 - **`TickResult`** - Enum for inference pipe tick outcomes (Produced, NoInput, BufferFull)
@@ -111,7 +109,7 @@ pub const MAX_ACTIONS: usize = 64;
 
 ### Design Principles
 
-- Zero-allocation in audio callback (fixed-size buffers)
+- Minimal work in audio callback (bulk-write raw samples, no framing)
 - Message passing over locks for thread safety
 - Composition-based rendering with wgpu command encoders
 - Error handling: `thiserror` for custom errors, `anyhow` for Results

@@ -1,9 +1,7 @@
 use std::time::Instant;
 
-use crate::audio::{AudioSamples, HOP_SIZE};
-
-use super::MEL_BANDS;
 use super::state::AudioState;
+use super::{AudioSamples, HOP_SIZE, MEL_BANDS};
 
 /// Threshold for transient detection based on energy delta.
 const TRANSIENT_THRESHOLD: f64 = 0.1;

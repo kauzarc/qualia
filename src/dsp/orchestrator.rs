@@ -5,8 +5,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use rtrb::{Consumer, Producer};
 use tracing::{info, warn};
 
-use crate::audio::AudioSamples;
-
 use super::input::AudioInput;
 use super::processor::DspProcessor;
 use super::state::AudioState;
@@ -20,7 +18,7 @@ pub struct DspOrchestrator {
 }
 
 impl DspOrchestrator {
-    pub fn new(samples_consumer: Consumer<AudioSamples>, output: Producer<AudioState>) -> Self {
+    pub fn new(samples_consumer: Consumer<f64>, output: Producer<AudioState>) -> Self {
         Self {
             input: AudioInput::new(samples_consumer),
             processor: DspProcessor::new(),

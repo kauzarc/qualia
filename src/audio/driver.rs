@@ -5,34 +5,7 @@ use cpal::{Device, Stream, StreamConfig};
 use rtrb::Producer;
 use tracing::{debug, error, warn};
 
-use super::{AudioDriverError, AudioSamples, HOP_SIZE};
-
-/// Accumulates variable-sized audio chunks into fixed `HOP_SIZE` buffers.
-struct HopAccumulator {
-    buffer: AudioSamples,
-    pos: usize,
-}
-
-impl HopAccumulator {
-    /// Creates a new accumulator with an empty buffer.
-    fn new() -> Self {
-        Self {
-            buffer: [0.0; HOP_SIZE],
-            pos: 0,
-        }
-    }
-
-    /// Accumulates a sample, returning a complete hop if ready.
-    fn accumulate(&mut self, sample: f64) -> Option<AudioSamples> {
-        self.buffer[self.pos] = sample;
-        self.pos += 1;
-
-        (self.pos == HOP_SIZE).then(|| {
-            self.pos = 0;
-            self.buffer
-        })
-    }
-}
+use super::AudioDriverError;
 
 /// Hard real-time audio capture driver.
 ///
@@ -45,7 +18,7 @@ pub struct AudioDriver {
 
 impl AudioDriver {
     /// Creates and starts the audio driver.
-    pub fn try_new(producer: Producer<AudioSamples>) -> Result<Self, AudioDriverError> {
+    pub fn try_new(producer: Producer<f64>) -> Result<Self, AudioDriverError> {
         let host = cpal::default_host();
         let device = host
             .default_input_device()
@@ -60,25 +33,21 @@ impl AudioDriver {
         Ok(Self { _stream: stream })
     }
 
-    /// Builds the cpal input stream with sample accumulation.
+    /// Builds the cpal input stream with bulk sample writing.
     ///
     /// Captures as f32 (hardware native) and converts to f64 for processing.
     fn build_stream(
         device: &Device,
         config: &StreamConfig,
-        mut producer: Producer<AudioSamples>,
+        mut producer: Producer<f64>,
     ) -> Result<Stream, cpal::BuildStreamError> {
-        let mut accumulator = HopAccumulator::new();
-
         device.build_input_stream(
             config,
             move |data: &[f32], _info| {
-                for &sample in data {
-                    if let Some(hop) = accumulator.accumulate(f64::from(sample))
-                        && producer.push(hop).is_err()
-                    {
-                        warn!("Sample buffer full, dropping frame");
-                    }
+                if let Ok(chunk) = producer.write_chunk_uninit(data.len()) {
+                    chunk.fill_from_iter(data.iter().map(|&s| f64::from(s)));
+                } else {
+                    warn!("Sample buffer full, dropping {} samples", data.len());
                 }
             },
             |err| {

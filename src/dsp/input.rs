@@ -2,41 +2,31 @@
 
 use rtrb::Consumer;
 
-use super::{AudioSamples, HOP_SIZE};
+use super::AudioSamples;
+use super::accumulator::HopAccumulator;
 
-/// Receives raw audio samples and accumulates them into fixed-size frames.
+/// Receives raw audio samples and accumulates them into fixed-size hops.
 pub struct AudioInput {
     consumer: Consumer<f64>,
-    accumulator: [f64; HOP_SIZE],
-    pos: usize,
-    samples: AudioSamples,
+    accumulator: HopAccumulator,
 }
 
 impl AudioInput {
     pub fn new(consumer: Consumer<f64>) -> Self {
         Self {
             consumer,
-            accumulator: [0.0; HOP_SIZE],
-            pos: 0,
-            samples: [0.0; HOP_SIZE],
+            accumulator: HopAccumulator::new(),
         }
     }
 
-    /// Drains all available samples, accumulating into frames
-    /// and keeping only the latest complete frame.
-    pub fn drain_to_latest(&mut self) {
+    /// Drains samples until one hop completes or input is exhausted.
+    pub fn drain_to_next_hop(&mut self) -> Option<&AudioSamples> {
         while let Ok(sample) = self.consumer.pop() {
-            self.accumulator[self.pos] = sample;
-            self.pos += 1;
-
-            if self.pos == HOP_SIZE {
-                self.pos = 0;
-                self.samples = self.accumulator;
+            if self.accumulator.push(sample) {
+                return Some(self.accumulator.hop());
             }
         }
-    }
 
-    pub fn samples(&self) -> &AudioSamples {
-        &self.samples
+        None
     }
 }

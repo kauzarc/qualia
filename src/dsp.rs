@@ -3,6 +3,7 @@
 //! Computes audio features from raw samples: FFT, Mel spectrogram, energy,
 //! spectral flux, zero-crossing rate, and transient detection.
 
+mod accumulator;
 mod input;
 mod orchestrator;
 mod processor;

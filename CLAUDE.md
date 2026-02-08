@@ -48,7 +48,8 @@ Trainer Thread (async, low priority)
 - `dsp/` - Digital signal processing
   - `thread.rs` - `DspThread` thread spawn and join
   - `orchestrator.rs` - `DspOrchestrator` core loop, coordinates IO and processing
-  - `input.rs` - `AudioInput` accumulates raw samples into `HOP_SIZE` frames
+  - `accumulator.rs` - `HopAccumulator` double-buffered sample-to-hop accumulation
+  - `input.rs` - `AudioInput` drains samples hop-by-hop via `drain_to_next_hop()`
   - `processor.rs` - `DspProcessor` stateful feature extraction
   - `state.rs` - `AudioState` (67 floats)
 - `inference/` - Neural network inference
@@ -100,8 +101,9 @@ pub const MAX_ACTIONS: usize = 64;
 
 ### Key Abstractions
 
-- **`AudioInput`** - Accumulates raw f64 samples into `HOP_SIZE` frames, exposes latest complete frame
-- **`DspOrchestrator`** - Coordinates input, processing, and output in core loop
+- **`HopAccumulator`** - Double-buffered accumulator, zero-copy hop completion via index toggle
+- **`AudioInput`** - Drains samples hop-by-hop, returns `Option<&AudioSamples>` per hop
+- **`DspOrchestrator`** - Processes every hop sequentially, sleeps when idle
 - **`InferencePipe`** - Module-local IO with "drain to latest" strategy
 - **`TickResult`** - Enum for inference pipe tick outcomes (Produced, NoInput, BufferFull)
 - **`RingPair<T>`** - Fixed-size circular buffer of 2 with O(1) push

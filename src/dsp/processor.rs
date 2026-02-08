@@ -1,5 +1,8 @@
+mod fft;
+
 use std::time::Instant;
 
+use self::fft::Fft;
 use super::state::AudioState;
 use super::{AudioSamples, HOP_SIZE, MEL_BANDS};
 
@@ -9,14 +12,19 @@ const TRANSIENT_THRESHOLD: f64 = 0.1;
 /// Handles DSP computations: FFT, Mel spectrogram, and feature extraction.
 pub struct DspProcessor {
     prev_energy: f64,
+    fft: Fft,
 }
 
 impl DspProcessor {
     pub fn new() -> Self {
-        Self { prev_energy: 0.0 }
+        Self {
+            prev_energy: 0.0,
+            fft: Fft::new(),
+        }
     }
 
     pub fn process(&mut self, samples: &AudioSamples) -> AudioState {
+        let _power_spectrum = self.fft.power_spectrum(samples);
         let energy = self.compute_energy(samples);
         let mel_bands = self.compute_mel_bands(samples);
         let spectral_flux = self.compute_spectral_flux(samples);

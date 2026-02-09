@@ -6,6 +6,9 @@ use self::fft::Fft;
 use super::state::AudioState;
 use super::{AudioSamples, HOP_SIZE, MEL_BANDS};
 
+/// Number of FFT frequency bins (`HOP_SIZE / 2 + 1`).
+const SPECTRUM_SIZE: usize = HOP_SIZE / 2 + 1;
+
 /// Threshold for transient detection based on energy delta.
 const TRANSIENT_THRESHOLD: f64 = 0.1;
 
@@ -13,6 +16,7 @@ const TRANSIENT_THRESHOLD: f64 = 0.1;
 pub struct DspProcessor {
     prev_energy: f64,
     fft: Fft,
+    power_spectrum: [f64; SPECTRUM_SIZE],
 }
 
 impl DspProcessor {
@@ -20,11 +24,12 @@ impl DspProcessor {
         Self {
             prev_energy: 0.0,
             fft: Fft::new(),
+            power_spectrum: [0.0; SPECTRUM_SIZE],
         }
     }
 
     pub fn process(&mut self, samples: &AudioSamples) -> AudioState {
-        let _power_spectrum = self.fft.power_spectrum(samples);
+        self.fft.power_spectrum(samples, &mut self.power_spectrum);
         let energy = self.compute_energy(samples);
         let mel_bands = self.compute_mel_bands(samples);
         let spectral_flux = self.compute_spectral_flux(samples);

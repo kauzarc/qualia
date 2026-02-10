@@ -15,11 +15,12 @@ impl DenseMelFilterbank {
     /// still produce correct triangular weights via interpolation.
     pub fn new(sample_rate: u64) -> Self {
         let centers_hz = Self::mel_center_frequencies(sample_rate);
+        let bins = centers_hz.map(|hz| Self::hz_to_fft_bin(hz, sample_rate));
 
         let weights = array::from_fn(|band| {
-            let left = Self::hz_to_fft_bin(centers_hz[band], sample_rate);
-            let center = Self::hz_to_fft_bin(centers_hz[band + 1], sample_rate);
-            let right = Self::hz_to_fft_bin(centers_hz[band + 2], sample_rate);
+            let left = bins[band];
+            let center = bins[band + 1];
+            let right = bins[band + 2];
 
             array::from_fn(|bin| Self::triangle_weight(bin, left, center, right))
         });

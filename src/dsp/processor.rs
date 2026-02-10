@@ -1,8 +1,10 @@
 mod fft;
+mod mel;
 
 use std::time::Instant;
 
 use self::fft::Fft;
+use self::mel::DenseMelFilterbank;
 use super::state::AudioState;
 use super::{AudioSamples, HOP_SIZE, MEL_BANDS};
 
@@ -21,6 +23,8 @@ pub struct DspProcessor {
 
 impl DspProcessor {
     pub fn new() -> Self {
+        let _ = DenseMelFilterbank::new(48_000);
+
         Self {
             prev_energy: 0.0,
             fft: Fft::new(),

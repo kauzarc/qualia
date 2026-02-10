@@ -10,7 +10,6 @@ pub struct Fft {
     algo: RealToComplexEven<f64>,
     input_buffer: [f64; HOP_SIZE],
     complex_buffer: [Complex<f64>; SPECTRUM_SIZE],
-    scratch_buffer: Box<[Complex<f64>]>,
 }
 
 impl Fft {
@@ -19,10 +18,9 @@ impl Fft {
         let algo = RealToComplexEven::new(HOP_SIZE, &mut planner);
 
         Self {
-            scratch_buffer: algo.make_scratch_vec().into_boxed_slice(),
+            algo,
             input_buffer: [0.0; HOP_SIZE],
             complex_buffer: [Complex::new(0.0, 0.0); SPECTRUM_SIZE],
-            algo,
         }
     }
 
@@ -39,11 +37,39 @@ impl Fft {
     fn fft(&mut self, samples: &AudioSamples) {
         self.input_buffer.copy_from_slice(samples);
         self.algo
-            .process_with_scratch(
-                &mut self.input_buffer,
-                &mut self.complex_buffer,
-                &mut self.scratch_buffer,
-            )
+            .process_with_scratch(&mut self.input_buffer, &mut self.complex_buffer, &mut [])
             .expect("FFT buffers have correct sizes");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn input_buffer_size_matches_algo() {
+        let fft = Fft::new();
+        assert_eq!(fft.input_buffer.len(), fft.algo.len());
+    }
+
+    #[test]
+    fn complex_buffer_size_matches_algo() {
+        let fft = Fft::new();
+        assert_eq!(fft.complex_buffer.len(), fft.algo.complex_len());
+    }
+
+    #[test]
+    fn scratch_not_needed() {
+        let fft = Fft::new();
+        assert_eq!(0, fft.algo.get_scratch_len());
+    }
+
+    #[test]
+    fn power_spectrum_runs() {
+        let mut fft = Fft::new();
+        let samples = [0.0_f64; HOP_SIZE];
+        let mut out = [0.0_f64; SPECTRUM_SIZE];
+        fft.power_spectrum(&samples, &mut out);
+        assert!(out.iter().all(|&v| v == 0.0));
     }
 }

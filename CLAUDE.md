@@ -50,7 +50,9 @@ Trainer Thread (async, low priority)
   - `orchestrator.rs` - `DspOrchestrator` core loop, coordinates IO and processing
   - `accumulator.rs` - `HopAccumulator` double-buffered sample-to-hop accumulation
   - `input.rs` - `AudioInput` drains samples hop-by-hop via `drain_to_next_hop()`
-  - `processor.rs` - `DspProcessor` stateful feature extraction
+  - `processor.rs` - `DspProcessor` stateful feature extraction (energy, mel bands, spectral flux, zero crossing rate, transient detection)
+  - `processor/fft.rs` - `Fft` wrapper around `rustfft`
+  - `processor/mel.rs` - `MelFilterbank` sparse mel-scaled filterbank
   - `state.rs` - `AudioState` (67 floats)
 - `inference/` - Neural network inference
   - `engine.rs` - `Inference` thread management
@@ -59,12 +61,12 @@ Trainer Thread (async, low priority)
   - `passthrough.rs` - `PassthroughModel` (MVP placeholder)
   - `params.rs` - `VisualParams`, `ControlVoltage`
 - `trainer.rs` - Online learning with replay buffer (skeleton)
+- `ring_pair.rs` - `RingPair<T>` fixed-size circular buffer of 2
 - `display/` - GPU rendering (wgpu) and control panel (egui)
   - `gpu.rs` - `GpuContext` for device/queue management
   - `window.rs` - `WindowContext` for surface configuration
   - `view.rs` - `ViewWindow` for visual output
   - `params.rs` - `ParamsBuffer` for visual params with interpolation
-  - `ring_pair.rs` - `RingPair<T>` fixed-size circular buffer of 2
   - `control/` - Control panel window
     - `panel.rs` - `ControlPanel` UI with feedback button
     - `gui.rs` - `GuiContext` egui state and rendering
@@ -78,6 +80,7 @@ const DSP_RATE_HZ: usize = 90;
 const INFERENCE_RATE_HZ: usize = 60;
 
 // dsp.rs
+pub const SAMPLE_RATE: u64 = 48_000;
 pub const HOP_SIZE: usize = 512;  // ~10.7ms at 48kHz
 pub const MEL_BANDS: usize = 64;
 
@@ -106,7 +109,8 @@ pub const MAX_ACTIONS: usize = 64;
 - **`DspOrchestrator`** - Processes every hop sequentially, sleeps when idle
 - **`InferencePipe`** - Module-local IO with "drain to latest" strategy
 - **`TickResult`** - Enum for inference pipe tick outcomes (Produced, NoInput, BufferFull)
-- **`RingPair<T>`** - Fixed-size circular buffer of 2 with O(1) push
+- **`RingPair<T>`** - Fixed-size circular buffer of 2 with O(1) push and in-place `push_with`
+- **`MelFilterbank`** - Sparse mel filterbank, hides dense construction detail
 - **`InferenceModel` trait** - Domain-specific: `infer()`, `output_size()`, `reward()`
 
 ### Design Principles

@@ -3,7 +3,7 @@ use std::array;
 use super::SPECTRUM_SIZE;
 use crate::dsp::{HOP_SIZE, MEL_BANDS};
 
-/// Per-band metadata indexing into `SparseMelFilterbank::weights`.
+/// Per-band metadata indexing into `MelFilterbank::weights`.
 #[derive(Clone, Copy)]
 struct BandRange {
     /// First non-zero bin index in the power spectrum.
@@ -14,42 +14,42 @@ struct BandRange {
     len: usize,
 }
 
-/// Sparse mel filterbank: all non-zero triangular weights packed into a single
-/// contiguous array, with per-band metadata for offset and length.
+/// Mel filterbank for converting a linear power spectrum to mel-scaled band energies.
 ///
-/// Applying this filterbank touches only the non-zero weights and their
-/// corresponding spectrum bins — both as contiguous slices.
-pub struct SparseMelFilterbank {
+/// Internally uses a sparse representation: all non-zero triangular weights are
+/// packed into a single contiguous array, with per-band metadata for offset and
+/// length. This means `apply` touches only the non-zero weights and their
+/// corresponding spectrum bins.
+pub struct MelFilterbank {
     bands: [BandRange; MEL_BANDS],
     weights: Box<[f64]>,
 }
 
-impl SparseMelFilterbank {
-    /// Apply the filterbank to a power spectrum, writing mel band energies into `out`.
-    pub fn apply(&self, spectrum: &[f64; SPECTRUM_SIZE], out: &mut [f64; MEL_BANDS]) {
-        self.bands.iter().zip(out.iter_mut()).for_each(
-            |(
-                &BandRange {
-                    spectrum_start,
-                    weight_offset,
-                    len,
-                },
-                out,
-            )| {
+impl MelFilterbank {
+    /// Build a mel filterbank for the given sample rate.
+    pub fn new(sample_rate: u64) -> Self {
+        DenseMelFilterbank::new(sample_rate).into_sparse()
+    }
+
+    /// Apply the filterbank to a power spectrum, returning mel band energies.
+    pub fn apply(&self, spectrum: &[f64; SPECTRUM_SIZE]) -> [f64; MEL_BANDS] {
+        self.bands.map(
+            |BandRange {
+                 spectrum_start,
+                 weight_offset,
+                 len,
+             }| {
                 let weight = &self.weights[weight_offset..weight_offset + len];
                 let spec = &spectrum[spectrum_start..spectrum_start + len];
-                *out = weight
-                    .iter()
-                    .zip(spec)
-                    .map(|(weight, spec)| weight * spec)
-                    .sum();
+                weight.iter().zip(spec).map(|(w, s)| w * s).sum()
             },
-        );
+        )
     }
 }
 
-/// Dense mel filterbank matrix for converting a linear power spectrum to mel bands.
-pub struct DenseMelFilterbank {
+/// Dense mel filterbank matrix — used only during construction to compute
+/// triangular weights before packing into sparse form.
+struct DenseMelFilterbank {
     weights: [[f64; SPECTRUM_SIZE]; MEL_BANDS],
 }
 
@@ -77,7 +77,7 @@ impl DenseMelFilterbank {
     ///
     /// Packs all non-zero weights into a single contiguous array and records
     /// per-band offsets for zero-overhead apply.
-    pub fn into_sparse(self) -> SparseMelFilterbank {
+    fn into_sparse(self) -> MelFilterbank {
         let mut weights = Vec::new();
         let bands = self.weights.map(|row| {
             if let Some(first) = row.iter().position(|&w| w > 0.0) {
@@ -105,7 +105,7 @@ impl DenseMelFilterbank {
             }
         });
 
-        SparseMelFilterbank {
+        MelFilterbank {
             bands,
             weights: weights.into_boxed_slice(),
         }
@@ -254,8 +254,7 @@ mod tests {
     fn sparse_zero_spectrum_gives_zero_bands() {
         let sparse = DenseMelFilterbank::new(SAMPLE_RATE).into_sparse();
         let spectrum = [0.0_f64; SPECTRUM_SIZE];
-        let mut out = [f64::NAN; MEL_BANDS];
-        sparse.apply(&spectrum, &mut out);
+        let out = sparse.apply(&spectrum);
         assert!(out.iter().all(|val| val.abs() < f64::EPSILON));
     }
 
@@ -273,8 +272,7 @@ mod tests {
         });
 
         let sparse = dense.into_sparse();
-        let mut sparse_result = [0.0_f64; MEL_BANDS];
-        sparse.apply(&spectrum, &mut sparse_result);
+        let sparse_result = sparse.apply(&spectrum);
 
         assert!(
             dense_result

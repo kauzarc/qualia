@@ -7,14 +7,14 @@ use std::time::Duration;
 use rtrb::{Consumer, Producer};
 use tracing::{info, warn};
 
-use super::HOP_SIZE;
 use super::input::AudioInput;
 use super::processor::DspProcessor;
 use super::state::AudioState;
+use super::{HOP_SIZE, SAMPLE_RATE};
 
 /// Sleep duration when no new frame is available.
 /// Half a hop at 48kHz (~5.3ms) balances responsiveness with CPU usage.
-const IDLE_SLEEP: Duration = Duration::from_micros(1_000_000 * HOP_SIZE as u64 / 48_000 / 2);
+const IDLE_SLEEP: Duration = Duration::from_micros(1_000_000 * HOP_SIZE as u64 / SAMPLE_RATE / 2);
 
 /// Orchestrates the DSP pipeline: drains input, delegates processing,
 /// and pushes output.

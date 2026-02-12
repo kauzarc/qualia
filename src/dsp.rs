@@ -13,6 +13,9 @@ mod thread;
 pub use state::AudioState;
 pub use thread::{DspThread, DspThreadError};
 
+/// Expected audio sample rate in Hz.
+pub const SAMPLE_RATE: u64 = 48_000;
+
 /// Number of samples per audio frame, ~10.7ms at 48kHz.
 pub const HOP_SIZE: usize = 512;
 

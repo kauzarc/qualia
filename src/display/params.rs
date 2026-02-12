@@ -4,8 +4,8 @@ use std::time::{Duration, Instant};
 
 use rtrb::Consumer;
 
-use super::ring_pair::RingPair;
 use crate::inference::{ControlVoltage, VisualParams};
+use crate::ring_pair::RingPair;
 
 /// Assumed display latency.
 const DISPLAY_DELAY: Duration = Duration::from_millis(16);

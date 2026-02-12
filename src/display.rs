@@ -5,7 +5,6 @@
 mod control;
 mod gpu;
 mod params;
-mod ring_pair;
 mod view;
 mod window;
 

@@ -15,11 +15,31 @@ impl<T: Default> Default for RingPair<T> {
     }
 }
 
+impl<T: Copy> RingPair<T> {
+    /// Creates a new `RingPair` with both slots initialized to the given value.
+    pub fn new(initial: T) -> Self {
+        Self {
+            buffer: [initial; 2],
+            newest: 0,
+        }
+    }
+}
+
 impl<T> RingPair<T> {
     /// Pushes a new value, making it the newest.
     pub fn push(&mut self, value: T) {
         self.newest = 1 - self.newest;
         self.buffer[self.newest] = value;
+    }
+
+    /// Advances to the next slot and returns a mutable reference to it,
+    /// allowing in-place initialization without copying.
+    pub fn push_with<F>(&mut self, f: F)
+    where
+        F: FnOnce(&mut T),
+    {
+        self.newest = 1 - self.newest;
+        f(&mut self.buffer[self.newest]);
     }
 
     /// Returns a reference to the newer element.

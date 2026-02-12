@@ -17,6 +17,7 @@ mod channel;
 mod display;
 mod dsp;
 mod inference;
+mod ring_pair;
 mod session;
 mod trainer;
 

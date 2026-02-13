@@ -1,5 +1,7 @@
 //! Audio input for the DSP pipeline.
 
+use std::cmp;
+
 use rtrb::Consumer;
 
 use super::AudioSamples;
@@ -21,12 +23,21 @@ impl AudioInput {
 
     /// Drains samples until one hop completes or input is exhausted.
     pub fn drain_to_next_hop(&mut self) -> Option<&AudioSamples> {
-        while let Ok(sample) = self.consumer.pop() {
-            if self.accumulator.push(sample) {
-                return Some(self.accumulator.hop());
-            }
+        let available = self.consumer.slots();
+        if available == 0 {
+            return None;
         }
 
-        None
+        let to_read = cmp::min(available, self.accumulator.remaining());
+        let chunk = self
+            .consumer
+            .read_chunk(to_read)
+            .expect("slots() guaranteed availability");
+        let hop_complete = <[_; 2]>::from(chunk.as_slices())
+            .into_iter()
+            .any(|s| self.accumulator.push_slice(s));
+        chunk.commit_all();
+
+        hop_complete.then(|| self.accumulator.hop())
     }
 }

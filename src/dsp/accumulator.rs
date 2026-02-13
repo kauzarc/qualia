@@ -1,8 +1,10 @@
-//! Fixed-size hop accumulator for sample-by-sample input.
+//! Fixed-size hop accumulator with bulk sample input.
+
+use std::cmp;
 
 use super::{AudioSamples, HOP_SIZE};
 
-/// Accumulates individual samples into fixed-size hops using double-buffering.
+/// Accumulates sample slices into fixed-size hops using double-buffering.
 ///
 /// One buffer is actively written to while the other holds the latest complete hop.
 /// When the active buffer fills, the index is toggled — no copy needed.
@@ -21,10 +23,18 @@ impl HopAccumulator {
         }
     }
 
-    /// Pushes a single sample. Returns `true` when a new hop is complete.
-    pub fn push(&mut self, sample: f64) -> bool {
-        self.buffers[self.active][self.pos] = sample;
-        self.pos += 1;
+    /// How many samples are needed to complete the current hop.
+    pub fn remaining(&self) -> usize {
+        HOP_SIZE - self.pos
+    }
+
+    /// Bulk-copies samples into the active buffer, up to `remaining()`.
+    /// Returns true when the hop is complete (buffer toggles automatically).
+    pub fn push_slice(&mut self, samples: &[f64]) -> bool {
+        let to_copy = cmp::min(samples.len(), self.remaining());
+        self.buffers[self.active][self.pos..self.pos + to_copy]
+            .copy_from_slice(&samples[..to_copy]);
+        self.pos += to_copy;
 
         if self.pos == HOP_SIZE {
             self.pos = 0;

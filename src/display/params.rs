@@ -17,6 +17,7 @@ pub struct ParamsBuffer {
 }
 
 impl ParamsBuffer {
+    /// Wraps a ring buffer consumer with a two-frame history for interpolation.
     pub fn new(consumer: Consumer<VisualParams>) -> Self {
         Self {
             consumer,

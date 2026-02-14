@@ -14,16 +14,19 @@ pub struct ViewWindow {
 }
 
 impl ViewWindow {
+    /// Configures the window surface for rendering.
     pub fn new(window: UnconfiguredWindow, adapter: &Adapter, device: &Device) -> Self {
         Self {
             window: window.configure(adapter, device),
         }
     }
 
+    /// Reconfigures the surface after a window resize.
     pub fn resize(&mut self, device: &Device, size: PhysicalSize<u32>) {
         self.window.resize(device, size);
     }
 
+    /// Renders a frame driven by the given control voltages.
     pub fn render(&self, gpu: &GpuContext, actions: &[ControlVoltage]) -> Result<(), RenderError> {
         let r = actions.first().copied().map_or(0.0, ControlVoltage::get);
         let g = actions.get(1).copied().map_or(0.0, ControlVoltage::get);

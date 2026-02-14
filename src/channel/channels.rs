@@ -22,17 +22,26 @@ const PARAMS_BUFFER_CAPACITY: usize = buffer_capacity(INFERENCE_RATE_HZ, VISUAL_
 
 /// All communication channels between pipeline components.
 pub struct Channels {
+    /// Sends raw audio samples from Audio → DSP.
     pub samples_producer: Producer<f64>,
+    /// Receives raw audio samples in the DSP thread.
     pub samples_consumer: Consumer<f64>,
+    /// Sends extracted audio state from DSP → Inference.
     pub state_producer: Producer<AudioState>,
+    /// Receives audio state in the Inference thread.
     pub state_consumer: Consumer<AudioState>,
+    /// Sends visual params from Inference → Display.
     pub params_producer: Producer<VisualParams>,
+    /// Receives visual params in the Display thread.
     pub params_consumer: Consumer<VisualParams>,
+    /// Sends user feedback from Display → Trainer.
     pub feedback_sender: Sender<Feedback>,
+    /// Receives user feedback in the Trainer thread.
     pub feedback_receiver: Receiver<Feedback>,
 }
 
 impl Channels {
+    /// Creates all pipeline channels with pre-computed buffer capacities.
     pub fn new() -> Self {
         debug!("Creating communication channels");
 

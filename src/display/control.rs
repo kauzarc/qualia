@@ -23,6 +23,7 @@ pub struct ControlWindow {
 }
 
 impl ControlWindow {
+    /// Configures the window surface and wires up the egui-based control panel.
     pub fn new(
         window: UnconfiguredWindow,
         adapter: &Adapter,
@@ -38,18 +39,22 @@ impl ControlWindow {
         }
     }
 
+    /// Returns the underlying winit window ID for event routing.
     pub fn window_id(&self) -> WindowId {
         self.window.window.id()
     }
 
+    /// Reconfigures the surface after a window resize.
     pub fn resize(&mut self, device: &Device, size: PhysicalSize<u32>) {
         self.window.resize(device, size);
     }
 
+    /// Forwards a winit event to egui. Returns `true` if egui consumed it.
     pub fn handle_event(&mut self, event: &WindowEvent) -> bool {
         self.gui.handle_event(&self.window.window, event)
     }
 
+    /// Runs the egui layout pass, then submits the rendered frame to the GPU.
     pub fn render(&mut self, gpu: &GpuContext) -> Result<(), RenderError> {
         let frame = self
             .gui

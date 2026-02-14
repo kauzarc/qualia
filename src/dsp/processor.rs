@@ -24,6 +24,7 @@ pub struct DspProcessor {
 }
 
 impl DspProcessor {
+    /// Initializes FFT, mel filterbank, and spectrum history for stateful processing.
     pub fn new() -> Self {
         Self {
             prev_energy: 0.0,
@@ -33,6 +34,7 @@ impl DspProcessor {
         }
     }
 
+    /// Extracts all audio features from one hop of samples into an [`AudioState`].
     pub fn process(&mut self, samples: &AudioSamples) -> AudioState {
         self.spectrums
             .push_with(|buffer| self.fft.power_spectrum(samples, buffer));

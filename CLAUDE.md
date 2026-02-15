@@ -44,7 +44,8 @@ Trainer Thread (async, low priority)
 - `channel/` - Pipeline communication infrastructure
   - `channels.rs` - `Channels` struct creates all ring buffers
 - `audio/` - Hard real-time audio capture (cpal)
-  - `driver.rs` - `AudioDriver` bulk-writes raw f64 samples
+  - `driver.rs` - `AudioDriver` bulk-writes raw f64 samples, signals fatal errors via `AppEvent`
+  - `error.rs` - `AudioDriverError` (init), `AudioStreamFatalError` (runtime) with `TryFrom<StreamError>`
 - `dsp/` - Digital signal processing
   - `thread.rs` - `DspThread` thread spawn and join
   - `orchestrator.rs` - `DspOrchestrator` core loop, coordinates IO and processing
@@ -99,7 +100,7 @@ pub const MAX_ACTIONS: usize = 64;
 
 - **rtrb ring buffers** - Lock-free for high-frequency data (samples, audio state, visual params)
 - **std::mpsc** - For low-frequency feedback events (Display → Trainer)
-- **EventLoopProxy** - UI events to main thread (ControlPanel → Session via `AppEvent`)
+- **EventLoopProxy** - UI events to main thread (ControlPanel, AudioDriver, Inference → Session via `AppEvent`)
 - **arc-swap** - Atomic model reloading
 
 ### Key Abstractions
@@ -112,6 +113,7 @@ pub const MAX_ACTIONS: usize = 64;
 - **`RingPair<T>`** - Fixed-size circular buffer of 2 with O(1) push and in-place `push_with`
 - **`MelFilterbank`** - Sparse mel filterbank, hides dense construction detail
 - **`InferenceModel` trait** - Domain-specific: `infer()`, `output_size()`, `reward()`
+- **`AudioStreamFatalError`** - Classifies `StreamError` via `TryFrom`: fatal (DeviceLost, StreamInvalidated) vs non-fatal (BackendSpecific, BufferUnderrun)
 
 ### Design Principles
 

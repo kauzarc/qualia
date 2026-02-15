@@ -3,6 +3,7 @@
 //! Creates and connects all threads and communication channels.
 
 use thiserror::Error;
+use tracing::error;
 use winit::{
     event::WindowEvent,
     event_loop::{ActiveEventLoop, EventLoopProxy},
@@ -72,7 +73,7 @@ impl Session {
     ) -> Result<Self, SessionInitError> {
         let channels = Channels::new();
 
-        let audio_driver = AudioDriver::try_new(channels.samples_producer)?;
+        let audio_driver = AudioDriver::try_new(channels.samples_producer, proxy.clone())?;
         let dsp_thread = DspThread::try_new(channels.samples_consumer, channels.state_producer)?;
         let inference = Inference::try_new(
             channels.state_consumer,
@@ -97,7 +98,6 @@ impl Session {
     }
 
     /// Handles an event, returning an action if needed.
-    #[expect(clippy::needless_pass_by_value, reason = "cheap copy")]
     pub fn handle_event(
         &mut self,
         event: SessionEvent,
@@ -117,6 +117,11 @@ impl Session {
 
             SessionEvent::App(AppEvent::FeedbackRequested) => {
                 self.display.send_feedback()?;
+            }
+
+            SessionEvent::App(AppEvent::AudioFatalError(err)) => {
+                error!("Audio fatal error: {}, exiting", err);
+                return Ok(Some(SessionAction::Exit));
             }
         }
         Ok(None)

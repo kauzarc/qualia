@@ -21,6 +21,7 @@ mod ring_pair;
 mod session;
 mod trainer;
 
+use audio::AudioStreamFatalError;
 use session::{Session, SessionAction, SessionEvent};
 
 /// Custom events for cross-thread communication with the event loop.
@@ -30,6 +31,8 @@ pub enum AppEvent {
     VisualParamsProduced,
     /// Control panel requests feedback be sent to trainer.
     FeedbackRequested,
+    /// Audio stream encountered a fatal error.
+    AudioFatalError(AudioStreamFatalError),
 }
 
 /// Main application entry point implementing the winit event loop handler.

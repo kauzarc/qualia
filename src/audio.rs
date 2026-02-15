@@ -7,4 +7,4 @@ mod driver;
 mod error;
 
 pub use driver::AudioDriver;
-pub use error::AudioDriverError;
+pub use error::{AudioDriverError, AudioStreamFatalError};

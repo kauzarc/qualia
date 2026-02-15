@@ -4,8 +4,10 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig};
 use rtrb::Producer;
 use tracing::{debug, error, warn};
+use winit::event_loop::EventLoopProxy;
 
-use super::AudioDriverError;
+use super::{AudioDriverError, AudioStreamFatalError};
+use crate::AppEvent;
 
 /// Hard real-time audio capture driver.
 ///
@@ -18,7 +20,10 @@ pub struct AudioDriver {
 
 impl AudioDriver {
     /// Creates and starts the audio driver.
-    pub fn try_new(producer: Producer<f64>) -> Result<Self, AudioDriverError> {
+    pub fn try_new(
+        producer: Producer<f64>,
+        proxy: EventLoopProxy<AppEvent>,
+    ) -> Result<Self, AudioDriverError> {
         let host = cpal::default_host();
         let device = host
             .default_input_device()
@@ -27,7 +32,7 @@ impl AudioDriver {
         let config = device.default_input_config()?;
         debug!("Audio input config: {:?}", config);
 
-        let stream = Self::build_stream(&device, &config.into(), producer)?;
+        let stream = Self::build_stream(&device, &config.into(), producer, proxy)?;
         stream.play()?;
 
         Ok(Self { _stream: stream })
@@ -40,6 +45,7 @@ impl AudioDriver {
         device: &Device,
         config: &StreamConfig,
         mut producer: Producer<f64>,
+        proxy: EventLoopProxy<AppEvent>,
     ) -> Result<Stream, cpal::BuildStreamError> {
         device.build_input_stream(
             config,
@@ -50,9 +56,14 @@ impl AudioDriver {
                     warn!("Sample buffer full, dropping {} samples", data.len());
                 }
             },
-            |err| {
-                error!("Audio stream error: {}", err);
-                todo!("Handle audio stream error");
+            move |err| match AudioStreamFatalError::try_from(err) {
+                Ok(fatal) => {
+                    error!("Audio stream fatal: {}", fatal);
+                    let _ = proxy.send_event(AppEvent::AudioFatalError(fatal));
+                }
+                Err(err) => {
+                    warn!("Audio stream error: {}", err);
+                }
             },
             None,
         )

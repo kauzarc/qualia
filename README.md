@@ -30,7 +30,7 @@ Asynchronous multi-threaded architecture separating temporal domains to guarante
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Inference Thread (>60 Hz)                                              │
 │  ┌─────────────┐                                                        │
-│  │  Inference  │  ONNX model forward pass (ort)                         │
+│  │ InfThread   │  ONNX model forward pass (ort)                         │
 │  └──────┬──────┘                                                        │
 │         │ VisualParams [N floats] (rtrb)                                │
 └─────────┼───────────────────────────────────────────────────────────────┘
@@ -62,7 +62,7 @@ Asynchronous multi-threaded architecture separating temporal domains to guarante
 |--------|--------|---------------|--------|
 | **AudioDriver** | Audio | `rtrb` → DSP | Basic infrastructure |
 | **DspThread** | DSP | `rtrb` → Inference | Feature extraction (FFT, mel, energy, spectral flux, ZCR, transients) |
-| **Inference** | Inference | `rtrb` → Main | Basic infrastructure |
+| **InferenceThread** | Inference | `rtrb` → Main | Basic infrastructure |
 | **Display** | Main | renders VisualParams, sends Feedback | Basic infrastructure |
 | **Trainer** | Trainer | `mpsc` ← Main | Basic infrastructure |
 

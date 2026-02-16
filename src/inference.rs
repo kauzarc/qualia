@@ -2,11 +2,12 @@
 //!
 //! Runs the trained model to transform `AudioState` into `VisualParams`.
 
-mod engine;
 mod model;
+mod orchestrator;
 mod params;
 mod passthrough;
 mod pipe;
+mod thread;
 
-pub use engine::{Inference, InferenceError};
 pub use params::{ControlVoltage, VisualParams};
+pub use thread::{InferenceThread, InferenceThreadError};

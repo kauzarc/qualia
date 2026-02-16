@@ -16,7 +16,7 @@ use crate::{
     channel::Channels,
     display::{Display, DisplayError},
     dsp::{DspThread, DspThreadError},
-    inference::{Inference, InferenceError},
+    inference::{InferenceThread, InferenceThreadError},
     trainer::{Trainer, TrainerError},
 };
 
@@ -24,7 +24,7 @@ use crate::{
 pub struct Session {
     _audio_driver: AudioDriver,
     _dsp_thread: DspThread,
-    _inference: Inference,
+    _inference: InferenceThread,
     _trainer: Trainer,
     display: Display,
 }
@@ -56,7 +56,7 @@ pub enum SessionInitError {
     DspThread(#[from] DspThreadError),
 
     #[error("Failed to init inference: {0}")]
-    Inference(#[from] InferenceError),
+    Inference(#[from] InferenceThreadError),
 
     #[error("Failed to init trainer: {0}")]
     Trainer(#[from] TrainerError),
@@ -75,7 +75,7 @@ impl Session {
 
         let audio_driver = AudioDriver::try_new(channels.samples_producer, proxy.clone())?;
         let dsp_thread = DspThread::try_new(channels.samples_consumer, channels.state_producer)?;
-        let inference = Inference::try_new(
+        let inference = InferenceThread::try_new(
             channels.state_consumer,
             channels.params_producer,
             proxy.clone(),

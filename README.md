@@ -8,7 +8,7 @@ A real-time visual generation engine for live performance (VJing) that uses onli
 
 ```
 Microphone ─→ DSP ─→ Inference ─→ GPU Renderer
-                         ↑                │
+                         ↑                 │
                      Trainer ←── Feedback ←┘
 ```
 

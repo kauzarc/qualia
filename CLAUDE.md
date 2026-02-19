@@ -56,10 +56,10 @@ Trainer Thread (async, low priority)
   - `processor/mel.rs` - `MelFilterbank` sparse mel-scaled filterbank
   - `state.rs` - `AudioState` (67 floats)
 - `inference/` - Neural network inference
-  - `thread.rs` - `InferenceThread` thread spawn and join
-  - `orchestrator.rs` - `InferenceOrchestrator` core loop, coordinates pipe IO and event proxy
+  - `thread.rs` - `InferenceThread` thread spawn and join; handles `InferenceRunError`
+  - `orchestrator.rs` - `InferenceOrchestrator` core loop, coordinates input, model, and output; returns `Result<(), InferenceRunError>`
+  - `input.rs` - `AudioStateInput` drains frames via "drain to latest" strategy
   - `model.rs` - `InferenceModel` trait (infer, output_size, reward)
-  - `pipe.rs` - `InferencePipe` with `TickResult` for IO
   - `passthrough.rs` - `PassthroughModel` (MVP placeholder)
   - `params.rs` - `VisualParams`, `ControlVoltage`
 - `trainer.rs` - Online learning with replay buffer (skeleton)
@@ -109,9 +109,8 @@ pub const MAX_ACTIONS: usize = 64;
 - **`HopAccumulator`** - Double-buffered accumulator with bulk `push_slice`, zero-copy hop completion via index toggle
 - **`AudioInput`** - Bulk-drains samples via `read_chunk` hop-by-hop, returns `Option<&AudioSamples>` per hop
 - **`DspOrchestrator`** - Processes every hop sequentially, sleeps when idle
-- **`InferenceOrchestrator`** - Runs inference pipe in a loop, notifies event loop on production
-- **`InferencePipe`** - Module-local IO with "drain to latest" strategy
-- **`TickResult`** - Enum for inference pipe tick outcomes (Produced, NoInput, BufferFull)
+- **`AudioStateInput`** - Drains `Consumer<AudioState>` to latest frame via `drain_to_latest()`
+- **`InferenceOrchestrator`** - Runs inference loop directly (input → model → output), returns `Err` if event loop closes
 - **`RingPair<T>`** - Fixed-size circular buffer of 2 with O(1) push and in-place `push_with`
 - **`MelFilterbank`** - Sparse mel filterbank, hides dense construction detail
 - **`InferenceModel` trait** - Domain-specific: `infer()`, `output_size()`, `reward()`

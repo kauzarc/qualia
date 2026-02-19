@@ -5,23 +5,32 @@ use std::thread;
 use std::time::Duration;
 
 use rtrb::{Consumer, Producer};
-use tracing::{error, info, warn};
-use winit::event_loop::EventLoopProxy;
+use thiserror::Error;
+use tracing::{info, warn};
+use winit::event_loop::{EventLoopClosed, EventLoopProxy};
 
 use crate::AppEvent;
 use crate::dsp::AudioState;
 
+use super::input::AudioStateInput;
+use super::model::InferenceModel;
 use super::params::VisualParams;
 use super::passthrough::PassthroughModel;
-use super::pipe::{InferencePipe, TickResult};
 
 /// Sleep duration when no new input is available.
 const IDLE_SLEEP: Duration = Duration::from_millis(1);
 
+/// Error returned when the inference loop terminates unexpectedly.
+#[derive(Debug, Error)]
+#[error("Event loop closed unexpectedly")]
+pub struct InferenceRunError(#[from] EventLoopClosed<AppEvent>);
+
 /// Orchestrates the inference pipeline: drains input, runs the model,
 /// and pushes output.
 pub struct InferenceOrchestrator {
-    pipe: InferencePipe<PassthroughModel>,
+    input: AudioStateInput,
+    model: PassthroughModel,
+    output: Producer<VisualParams>,
     proxy: EventLoopProxy<AppEvent>,
 }
 
@@ -31,33 +40,34 @@ impl InferenceOrchestrator {
         params_producer: Producer<VisualParams>,
         proxy: EventLoopProxy<AppEvent>,
     ) -> Self {
-        let model = PassthroughModel::new(16);
-        let pipe = InferencePipe::new(model, state_consumer, params_producer);
-
-        Self { pipe, proxy }
+        Self {
+            input: AudioStateInput::new(state_consumer),
+            model: PassthroughModel::new(16),
+            output: params_producer,
+            proxy,
+        }
     }
 
     /// Runs the core loop until the stop flag is set.
-    pub fn run(mut self, stop_flag: &AtomicBool) {
+    ///
+    /// Returns `Err` if the event loop closes unexpectedly.
+    pub fn run(mut self, stop_flag: &AtomicBool) -> Result<(), InferenceRunError> {
         info!("Inference thread started");
 
         while !stop_flag.load(Ordering::Relaxed) {
-            match self.pipe.tick() {
-                TickResult::Produced => {
-                    if self
-                        .proxy
-                        .send_event(AppEvent::VisualParamsProduced)
-                        .is_err()
-                    {
-                        error!("Event loop closed, stopping inference");
-                        break;
-                    }
+            if let Some(state) = self.input.drain_to_latest() {
+                let params = self.model.infer(&state);
+
+                if self.output.push(params).is_err() {
+                    warn!("VisualParams buffer full, dropping frame");
+                } else {
+                    self.proxy.send_event(AppEvent::VisualParamsProduced)?;
                 }
-                TickResult::NoInput => thread::sleep(IDLE_SLEEP),
-                TickResult::BufferFull => warn!("VisualParams buffer full, dropping frame"),
+            } else {
+                thread::sleep(IDLE_SLEEP);
             }
         }
 
-        info!("Inference thread stopped");
+        Ok(())
     }
 }

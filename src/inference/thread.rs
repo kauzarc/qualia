@@ -5,7 +5,7 @@ use std::thread::{self, JoinHandle};
 
 use rtrb::{Consumer, Producer};
 use thiserror::Error;
-use tracing::error;
+use tracing::{error, info};
 use winit::event_loop::EventLoopProxy;
 
 use crate::AppEvent;
@@ -40,8 +40,12 @@ impl InferenceThread {
         let handle = thread::Builder::new()
             .name("inference".into())
             .spawn(move || {
-                InferenceOrchestrator::new(state_consumer, params_producer, proxy)
-                    .run(&thread_stop_flag);
+                match InferenceOrchestrator::new(state_consumer, params_producer, proxy)
+                    .run(&thread_stop_flag)
+                {
+                    Ok(()) => info!("Inference thread stopped"),
+                    Err(e) => error!("Inference stopped unexpectedly: {e}"),
+                }
             })?;
 
         Ok(Self {
